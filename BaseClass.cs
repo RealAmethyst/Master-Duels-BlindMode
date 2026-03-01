@@ -9,6 +9,7 @@ using UnityEngine.UI;
 
 using Il2CppYgomSystem.UI;
 using Il2CppYgomGame.Duel;
+using Il2CppYgomGame.Menu;
 
 using MelonLoader;
 
@@ -168,6 +169,14 @@ namespace BlindMode
 
         public static SnapContentManager SnapContentManager;
 
+        // Download progress tracking
+        internal static DownloadViewController activeDownloadVC = null;
+        internal static int lastDownloadPercent = -1;
+
+        // Enquete (survey) page tracking — polls until async content loads
+        internal static bool pendingEnqueteCheck = false;
+        internal static string lastEnquetePage = "";
+
         public void Awake()
         {
             Instance = this;
@@ -211,6 +220,8 @@ namespace BlindMode
 
             CheckDialogTitle();
             CheckScreenChange();
+            CheckDownloadProgress();
+            CheckEnqueteScreen();
 
             // Process deferred button speech after dialog/screen detection.
             // This ensures dialog headers always speak before button text.

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
@@ -9,6 +10,8 @@ using Il2CppYgomSystem.UI;
 using Il2CppYgomSystem.YGomTMPro;
 using Il2CppYgomSystem.ElementSystem;
 using Il2CppYgomGame.Menu;
+using Il2CppYgomGame.Download;
+using Il2CppYgomGame.Enquete;
 
 using static BlindMode.BaseClass;
 using static BlindMode.UIHelpers;
@@ -547,6 +550,50 @@ namespace BlindMode
 
                 if (cleanName == "GameEntryV1" || cleanName == "GameEntrySequenceV2") return;
 
+                // Enquete (survey) loads content asynchronously via coroutine,
+                // so m_View is null at this point. Poll in Update() instead.
+                if (cleanName == "Enquete")
+                {
+                    pendingEnqueteCheck = true;
+                    lastEnquetePage = "";
+                    return;
+                }
+
+                // Title screen: just read the version number from CodeVer EOM element
+                if (cleanName == "Title")
+                {
+                    ElementObjectManager eom = GetViewFromVC(focusVC);
+                    if (eom != null)
+                    {
+                        try
+                        {
+                            var serialized = eom.serializedElements;
+                            if (serialized != null)
+                            {
+                                foreach (var elem in serialized)
+                                {
+                                    if (elem == null) continue;
+                                    if (elem.label == "CodeVer")
+                                    {
+                                        var tmp = elem.gameObject?.GetComponentInChildren<TMP_Text>(true);
+                                        if (tmp != null && !string.IsNullOrEmpty(tmp.text?.Trim()))
+                                        {
+                                            SpeakScreenHeader(tmp.text.Trim());
+                                            DebugLog.Log($"[ScreenChange] Title | version='{tmp.text.Trim()}'");
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            DebugLog.Log($"[ScreenChange] Title version error: {ex.Message}");
+                        }
+                    }
+                    return;
+                }
+
                 string headerText = ReadGameHeaderText();
                 string titleText = FindScreenTitle(focusVC);
 
@@ -570,6 +617,138 @@ namespace BlindMode
                 QueueFocusedItem(contentCanvas ?? focusVC.gameObject);
             }
             catch { }
+        }
+
+        /// <summary>
+        /// Poll for Enquete (survey) page changes. Content loads asynchronously,
+        /// so we check each frame until m_PageText is populated, then announce
+        /// the question text and queue the focused item.
+        /// Also re-announces when page changes (e.g. "1/3" → "2/3").
+        /// </summary>
+        internal static void CheckEnqueteScreen()
+        {
+            if (!pendingEnqueteCheck) return;
+
+            try
+            {
+                GameObject contentManager = GameObject.Find("UI/ContentCanvas/ContentManager");
+                if (contentManager == null) return;
+                var vcm = contentManager.GetComponent<ViewControllerManager>();
+                if (vcm == null) return;
+                var focusVC = vcm.GetFocusViewController();
+                if (focusVC == null) return;
+
+                string vcName = focusVC.name;
+                string cleanName = vcName.EndsWith("(Clone)") ? vcName[..^7] : vcName;
+                if (cleanName != "Enquete")
+                {
+                    pendingEnqueteCheck = false;
+                    lastEnquetePage = "";
+                    return;
+                }
+
+                var enqueteVC = focusVC.TryCast<EnqueteViewController>();
+                if (enqueteVC == null) return;
+
+                // Wait for page text to be populated (async loading)
+                var pageTextComp = enqueteVC.m_PageText;
+                string pageText = pageTextComp != null ? pageTextComp.text?.Trim() : null;
+                if (string.IsNullOrEmpty(pageText)) return; // Still loading
+
+                // Only announce on page change
+                if (pageText == lastEnquetePage) return;
+                lastEnquetePage = pageText;
+
+                // Scan all TMP_Text in the VC hierarchy for question/description text
+                var allTmp = focusVC.gameObject.GetComponentsInChildren<TMP_Text>(true);
+                if (allTmp == null) return;
+
+                var texts = new List<string>();
+                foreach (var tmp in allTmp)
+                {
+                    if (tmp == null || !tmp.gameObject.activeInHierarchy) continue;
+                    string rawText = tmp.text?.Trim();
+                    if (string.IsNullOrEmpty(rawText)) continue;
+                    string clean = Regex.Replace(rawText, @"<[^>]+>", "").Trim();
+                    if (string.IsNullOrEmpty(clean)) continue;
+
+                    // Skip page indicator, button labels, and very short text
+                    if (clean == pageText) continue;
+                    string nameLower = tmp.name.ToLower();
+                    if (nameLower.Contains("button") || nameLower.Contains("shortcut")) continue;
+
+                    // Skip option texts (they'll be spoken via button navigation)
+                    string parentName = tmp.transform.parent?.name?.ToLower() ?? "";
+                    if (parentName.Contains("toggle") || parentName.Contains("entity") || parentName.Contains("checkbox")) continue;
+
+                    texts.Add(clean);
+                }
+
+                if (texts.Count == 0) return;
+
+                // Build announcement: description/question text + page indicator
+                string announcement = string.Join(". ", texts.Distinct()) + $". {pageText}";
+                SpeakScreenHeader(announcement);
+                QueueFocusedItem(focusVC.gameObject);
+
+                DebugLog.Log($"[Enquete] Page {pageText}: {announcement}");
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Log($"[Enquete] Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Poll the active DownloadViewController for progress changes.
+        /// Announces each whole percentage change.
+        /// </summary>
+        internal static void CheckDownloadProgress()
+        {
+            try
+            {
+                if (activeDownloadVC == null) return;
+
+                // Check if VC is still alive
+                if (activeDownloadVC.WasCollected || !activeDownloadVC.gameObject.activeInHierarchy)
+                {
+                    activeDownloadVC = null;
+                    lastDownloadPercent = -1;
+                    return;
+                }
+
+                var controller = activeDownloadVC.downloadController;
+                if (controller == null) return;
+
+                int percent = (int)(controller.TotalProgress * 100f);
+                if (percent == lastDownloadPercent) return;
+
+                lastDownloadPercent = percent;
+                old_copiedText = ""; // Reset so same-text check doesn't block
+
+                if (percent >= 100)
+                {
+                    // Read the game's own completion text
+                    var stateText = activeDownloadVC.DownloadingStateText;
+                    string completeMsg = stateText != null ? stateText.text?.Trim() : null;
+                    if (string.IsNullOrEmpty(completeMsg))
+                    {
+                        var dlText = activeDownloadVC.DownloadingText;
+                        completeMsg = dlText != null ? dlText.text?.Trim() : null;
+                    }
+                    SpeakText(!string.IsNullOrEmpty(completeMsg) ? completeMsg : $"{percent} percent");
+                    activeDownloadVC = null;
+                    lastDownloadPercent = -1;
+                }
+                else
+                {
+                    SpeakText($"{percent} percent");
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Log($"[Download] Error checking progress: {ex.Message}");
+            }
         }
 
         /// <summary>

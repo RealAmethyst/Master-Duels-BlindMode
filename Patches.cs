@@ -5,11 +5,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+using System.Text.RegularExpressions;
+
+using Il2CppTMPro;
 using Il2CppYgomSystem.UI;
 using Il2CppYgomSystem.YGomTMPro;
 using Il2CppYgomGame.Duel;
 using Il2CppYgomGame.CardBrowser;
 using Il2CppYgomGame.Menu;
+using Il2CppYgomGame.Enquete;
 
 using HarmonyLib;
 
@@ -111,6 +115,21 @@ namespace BlindMode
         static void Postfix(TitleDataLinkDialogViewController __instance)
         {
             AnnounceDialogVC(__instance);
+        }
+    }
+
+    [HarmonyPatch(typeof(DownloadViewController), "OnCreatedView")]
+    class PatchDownloadViewControllerCreated
+    {
+        [HarmonyPostfix]
+        static void Postfix(DownloadViewController __instance)
+        {
+            activeDownloadVC = __instance;
+            lastDownloadPercent = -1;
+            string title = FindScreenTitle(__instance);
+            if (!string.IsNullOrEmpty(title))
+                SpeakScreenHeader(title);
+            DebugLog.Log("[Download] DownloadViewController created, tracking progress");
         }
     }
 
@@ -338,6 +357,34 @@ namespace BlindMode
         static void Postfix(SelectionButton __instance)
         {
             textToCopy = FindExtendedTextElement(__instance.gameObject);
+
+            // Fallback: search sibling elements for text (not recursive subtrees).
+            // Handles toggle/radio widgets where the label is a sibling of the button.
+            if (string.IsNullOrEmpty(textToCopy?.Trim()))
+            {
+                var current = __instance.transform;
+                for (int level = 0; level < 3 && current.parent != null; level++)
+                {
+                    var parent = current.parent;
+                    for (int i = 0; i < parent.childCount; i++)
+                    {
+                        var sibling = parent.GetChild(i);
+                        if (sibling == current) continue;
+                        var tmp = sibling.GetComponent<TMP_Text>();
+                        if (tmp != null && tmp.gameObject.activeInHierarchy)
+                        {
+                            string clean = Regex.Replace(tmp.text ?? "", @"<[^>]+>", "").Trim();
+                            if (!string.IsNullOrEmpty(clean))
+                            {
+                                textToCopy = clean;
+                                goto siblingFound;
+                            }
+                        }
+                    }
+                    current = current.parent;
+                }
+                siblingFound:;
+            }
 
             switch (currentMenu)
             {
