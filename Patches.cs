@@ -1,0 +1,428 @@
+using System;
+using System.Linq;
+using System.Collections.Generic;
+
+using UnityEngine;
+using UnityEngine.UI;
+
+using Il2CppYgomSystem.UI;
+using Il2CppYgomSystem.YGomTMPro;
+using Il2CppYgomGame.Duel;
+using Il2CppYgomGame.CardBrowser;
+using Il2CppYgomGame.Menu;
+
+using HarmonyLib;
+
+using static BlindMode.BaseClass;
+using static BlindMode.UIHelpers;
+using static BlindMode.MenuProcessors;
+using static BlindMode.ScreenDetection;
+
+namespace BlindMode
+{
+    #region card browser patch
+    [HarmonyPatch(typeof(CardBrowserViewController), nameof(CardBrowserViewController.Start))]
+    class PatchBrowserViewControllerStart
+    {
+        [HarmonyPostfix]
+        static void Postfix(CardBrowserViewController __instance)
+        {
+            BaseClass.SnapContentManager = __instance.GetComponentInChildren<Il2CppYgomSystem.UI.SnapContentManager>();
+        }
+    }
+    #endregion
+
+    #region duels patch
+
+    [HarmonyPatch(typeof(DuelLP), nameof(DuelLP.ChangeLP), MethodType.Normal)]
+    class PatchChangeLP
+    {
+        [HarmonyPostfix]
+        private static void Postfix(DuelLP __instance)
+        {
+            SpeakText(string.Format("{0} current life points: {1}", __instance.name.Contains("Far") ? "Opponent's" : "Your", __instance.currentLP));
+            if (__instance.currentLP < 1)
+            {
+                IsInDuel = false;
+                cardsInDuel.Clear();
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(DuelClient), nameof(DuelClient.Awake))]
+    class PatchDuelClientSetupPvp
+    {
+        [HarmonyPostfix]
+        static void Postfix(DuelClient __instance)
+        {
+            currentMenu = Menus.DUEL;
+            IsInDuel = true;
+        }
+    }
+
+    [HarmonyPatch(typeof(CardRoot), nameof(CardRoot.Initialize), MethodType.Normal)]
+    class PatchCardRoot
+    {
+        [HarmonyPostfix]
+        private static void Postfix(CardRoot __instance)
+        {
+            cardsInDuel.Add(__instance);
+        }
+    }
+
+    [HarmonyPatch(typeof(CardInfo), nameof(CardInfo.SetDescriptionArea))]
+    class PatchCardInfoSetCard
+    {
+        [HarmonyPostfix]
+        static void Postfix(CardInfo __instance)
+        {
+            Instance.Invoke("CopyUI", __instance.gameObject.activeInHierarchy ? 0f : 0.2f);
+        }
+    }
+
+    #endregion
+
+    #region dialog patches
+
+    [HarmonyPatch(typeof(ActionSheetViewController), "OnCreatedView")]
+    class PatchActionSheetCreated
+    {
+        [HarmonyPostfix]
+        static void Postfix(ActionSheetViewController __instance)
+        {
+            AnnounceDialogVC(__instance);
+        }
+    }
+
+    [HarmonyPatch(typeof(CommonDialogViewController), "OnCreatedView")]
+    class PatchCommonDialogCreated
+    {
+        [HarmonyPostfix]
+        static void Postfix(CommonDialogViewController __instance)
+        {
+            AnnounceDialogVC(__instance);
+        }
+    }
+
+    [HarmonyPatch(typeof(TitleDataLinkDialogViewController), "OnCreatedView")]
+    class PatchTitleDataLinkDialogCreated
+    {
+        [HarmonyPostfix]
+        static void Postfix(TitleDataLinkDialogViewController __instance)
+        {
+            AnnounceDialogVC(__instance);
+        }
+    }
+
+    #endregion
+
+    #region buttons patches
+
+    [HarmonyPatch(typeof(ColorContainerImage), nameof(ColorContainerImage.SetColor), MethodType.Normal)]
+    class PatchColorContainerImage
+    {
+        [HarmonyPostfix]
+        private static void Postfix(ColorContainerImage __instance)
+        {
+            try
+            {
+                if (__instance.currentStatusMode != ColorContainer.StatusMode.Enter) return;
+
+                textToCopy = "";
+
+                switch (__instance.transform.parent.parent.parent.name)
+                {
+                    case "DuelMenuButton":
+                        textToCopy = $"Menu button";
+                        break;
+                }
+
+                if (textToCopy != "") SpeakText();
+            }
+            catch { }
+        }
+    }
+
+    [HarmonyPatch(typeof(ColorContainerGraphic), nameof(ColorContainerGraphic.SetColor))]
+    class PatchColorContainerGraphic
+    {
+        [HarmonyPostfix]
+        static void Postfix(ColorContainerGraphic __instance)
+        {
+            try
+            {
+                if (__instance.currentStatusMode != ColorContainer.StatusMode.Enter) return;
+
+                if (IsInDuel && __instance.transform.parent.parent.name.Contains("DuelListCard"))
+                {
+                    __instance.transform.parent.parent.GetComponent<SelectionButton>().Click();
+                    Instance.CopyUI();
+                    return;
+                }
+
+                textToCopy = "";
+
+                switch (__instance.transform.parent.parent.name)
+                {
+                    case "ButtonMaintenance":
+                        textToCopy = "Maintenance";
+                        break;
+                    case "ButtonBug":
+                        textToCopy = "Issues";
+                        break;
+                    case "ButtonNotification":
+                        textToCopy = "Notification";
+                        break;
+                    case "InputButton":
+                        if (__instance.transform.parent.parent.name.Equals("NameAreaGroup") || currentMenu == Menus.NONE)
+                        {
+                            textToCopy = "Rename button/input";
+                        }
+                        else
+                        {
+                            textToCopy = "Search card input";
+                        }
+                        break;
+                    case "AutoBuildButton":
+                        textToCopy = "Auto-build button";
+                        break;
+                    case "ButtonBookmark":
+                        textToCopy = "Add card to bookmark button";
+                        break;
+                    case "BookmarkButton":
+                        textToCopy = "Bookmarked cards button";
+                        break;
+                    case "HowToGetButton":
+                        textToCopy = "How to get button";
+                        break;
+                    case "RelatedCard":
+                        textToCopy = "Related cards button";
+                        break;
+                    case "DismantleButton":
+                        string dismantle = FindExtendedTextElement(__instance.transform.parent.parent.GetChild(6).gameObject);
+                        textToCopy = $"{(string.IsNullOrEmpty(dismantle) ? "Cant be dismantled" : $"Dismantle card for: {FindExtendedTextElement(__instance.transform.parent.parent.GetChild(6).gameObject)} {GetRarity(__instance.transform.parent.parent.GetChild(6).GetComponentInChildren<Image>().sprite.name)} cp")}";
+                        break;
+                    case "CreateButton":
+                        textToCopy = $"Create card for: {FindExtendedTextElement(__instance.transform.parent.parent.GetChild(6).gameObject)} {GetRarity(__instance.transform.parent.parent.GetChild(6).GetComponentInChildren<Image>().sprite.name)} cp";
+                        break;
+                    case "AddButton":
+                        textToCopy = "Add +1";
+                        break;
+                    case "RemoveButton":
+                        textToCopy = "Remove -1";
+                        break;
+                    case "CardListButton":
+                        textToCopy = "Card list button";
+                        break;
+                    case "HistotyButton": // they dont know how to write "history"
+                        textToCopy = "Card history button";
+                        break;
+                    case "ButtonRegulation":
+                        textToCopy = "Regulation button";
+                        break;
+                    case "ButtonSecretPack":
+                        textToCopy = "Secret pack button";
+                        break;
+                    case "ButtonInfoSwitching":
+                        textToCopy = "Switch display mode button";
+                        break;
+                    case "ButtonSave":
+                        textToCopy = "Save button";
+                        break;
+                    case "ButtonMenu":
+                        textToCopy = "Menu button";
+                        break;
+                    case "ButtonPickupCard":
+                        textToCopy = "Show cards on decks preview";
+                        break;
+                    case "BulkDecksDeletionButton":
+                        textToCopy = "Bulk deck deletion button";
+                        break;
+                    case "ButtonOpenNeuronDecks":
+                        textToCopy = "Link with Yu Gi Oh Database";
+                        break;
+                    case "FilterButton":
+                        textToCopy = "Filters button";
+                        break;
+                    case "SortButton":
+                        textToCopy = "Sort button";
+                        break;
+                    case "ClearButton":
+                        textToCopy = "Clear filters button";
+                        break;
+                    case "Button0":
+                        textToCopy = $"{FindExtendedTextElement(__instance.transform.parent.parent.parent.gameObject)}, lower to higher";
+                        break;
+                    case "Button1":
+                        textToCopy = $"{FindExtendedTextElement(__instance.transform.parent.parent.parent.gameObject)}, higher to lower";
+                        break;
+                    case "ButtonDismantleIncrement":
+                        textToCopy = "Increment dismantle amount";
+                        break;
+                    case "ButtonDismantleDecrement":
+                        textToCopy = "Decrement dismantle amount";
+                        break;
+                    case "ButtonEnter":
+                        textToCopy = "Play";
+                        break;
+                    case "CopyButton":
+                        textToCopy = "Copy deck button";
+                        break;
+                    case "OKButton":
+                        textToCopy = "Ok";
+                        break;
+                    case "ShowOwnedNumToggle":
+                        textToCopy = "Show owned button";
+                        break;
+                }
+
+                switch (__instance.transform.parent.parent.parent.name)
+                {
+                    case "TabMyDeck":
+                        textToCopy = "My Deck";
+                        break;
+                    case "TabRental":
+                        textToCopy = "Loaner";
+                        break;
+                    case "ChapterDuel(Clone)":
+                        textToCopy = $"Duel, {FindExtendedTextElement(__instance.transform.parent.parent.GetChild(4).gameObject)} stars";
+                        break;
+                    case "DuelMenuButton":
+                        textToCopy = $"Menu button";
+                        break;
+                }
+
+                if (textToCopy != "") SpeakText();
+            }
+            catch { }
+        }
+    }
+
+
+    [HarmonyPatch(typeof(SelectionButton), nameof(SelectionButton.OnClick), MethodType.Normal)]
+    class PatchOnClick
+    {
+        static List<string> previewElements = new() { "CardPict", "CardClone", "CreateButton", "ImageCard", "NextButton", "PrevButton", "Related Cards", "ThumbButton", "SlotTemplate(Clone)", "Locator", "GoldpassRewardButton", "NormalpassRewardButton", "ButtonDuelPass" };
+
+        [HarmonyPostfix]
+        static void Postfix(SelectionButton __instance)
+        {
+            try
+            {
+                if (menuNames.TryGetValue(FindExtendedTextElement(__instance.gameObject), out Menus menu))
+                {
+                    currentMenu = menu;
+                    textRecord.Clear();
+                }
+            }
+            catch { }
+
+            if (__instance.name.Equals("ButtonDecidePositive(Clone)") && IsInDuel)
+            {
+                IsInDuel = false;
+                cardsInDuel.Clear();
+                currenElement.Clear();
+            }
+
+            if (previewElements.Contains(__instance.name))
+            {
+                Instance.Invoke("CopyUI", currentMenu == Menus.DuelPass ? 1.5f : 0.5f);
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(SelectionButton), nameof(SelectionButton.OnSelected), MethodType.Normal)]
+    class PatchOnSelected
+    {
+        [HarmonyPostfix]
+        static void Postfix(SelectionButton __instance)
+        {
+            textToCopy = FindExtendedTextElement(__instance.gameObject);
+
+            switch (currentMenu)
+            {
+                case Menus.NONE:
+                    ProcessNotificationsPopup(__instance);
+                    ProcessFriendsMenu(__instance);
+                    ProcessProfile(__instance);
+                    //ProcessDailyReward(__instance);
+                    ProcessEventBanner(__instance);
+                    ProcessTopicsBanner(__instance);
+                break;
+                case Menus.Settings:
+                    ProcessSettingsMenu(__instance);
+                break;
+                case Menus.Notifications:
+                    ProcessNotifications(__instance);
+                break;
+                case Menus.Missions:
+                    ProcessMissionsMenu(__instance);
+                break;
+                case Menus.SHOP:
+                    ProcessPacks(__instance);
+                    ProcessCardPack(__instance);
+                break;
+                case Menus.DuelPass:
+                    ProcessDuelPass(__instance);
+                break;
+                case Menus.DECK:
+                    ProcessDecksMenu(__instance);
+                    ProcessNewDeck(__instance);
+                break;
+                case Menus.SOLO:
+                    ProcessDuelGame(__instance);
+                    ProcessDuelMenu(__instance);
+                break;
+                case Menus.DUEL:
+                    ProcessDuelGame(__instance);
+                    ProcessDuelMenu(__instance);
+                break;
+            }
+
+            // Only speak if there's actual text content
+            if (string.IsNullOrEmpty(textToCopy?.Trim())) return;
+
+            // Append position index (e.g. ", 3 of 5")
+            string posText = GetSelectionPosition(__instance);
+            if (!string.IsNullOrEmpty(posText))
+                textToCopy += posText;
+
+            // Defer speech to Update() so dialog/screen detection runs first.
+            // This prevents button text from speaking before a dialog header
+            // when clicking a button that opens a dialog (e.g. "Data Transfer").
+            pendingButtonText = textToCopy;
+        }
+    }
+
+    [HarmonyPatch(typeof(SelectionButton), nameof(SelectionButton.OnDeselected), MethodType.Normal)]
+    class PatchOnDeselected
+    {
+        [HarmonyPostfix]
+        static void Postfix(SelectionButton __instance)
+        {
+            DeselectButton();
+        }
+    }
+
+    #endregion
+
+    [HarmonyPatch(typeof(ViewController), nameof(ViewController.OnBack))]
+    class PatchViewController
+    {
+        [HarmonyPostfix]
+        public static void Postfix(ViewController __instance)
+        {
+            try
+            {
+                if (__instance.manager == null) return;
+                var focusVC = __instance.manager.GetFocusViewController();
+                if (focusVC == null) return;
+                if (focusVC.name == "Home")
+                {
+                    currentMenu = Menus.NONE;
+                }
+            }
+            catch { }
+        }
+    }
+}
