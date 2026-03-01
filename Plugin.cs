@@ -3,44 +3,32 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
-using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 using UnityEngine;
 using UnityEngine.UI;
 
-using TMPro;
+using Il2CppTMPro;
 
-using YgomSystem.UI;
-using YgomSystem.YGomTMPro;
-using YgomGame.Duel;
-using YgomGame.CardBrowser;
+using Il2CppYgomSystem.UI;
+using Il2CppYgomSystem.YGomTMPro;
+using Il2CppYgomGame.Duel;
+using Il2CppYgomGame.CardBrowser;
 
-using BepInEx;
-using BepInEx.Logging;
-using BepInEx.Unity.IL2CPP;
+using MelonLoader;
 using HarmonyLib;
 using Il2CppInterop.Runtime.Injection;
 
-using CrossSpeak;
-
 using static BlindMode.BaseClass;
+
+[assembly: MelonInfo(typeof(BlindMode.BlindModeMod), "Blind Mode", "3.0.0", "radsi & RealAmethyst")]
+[assembly: MelonGame("Konami Digital Entertainment Co., Ltd.", "masterduel")]
 
 namespace BlindMode
 {
-    [BepInPlugin("radsi.blindmode", "Blind Mode", "2.1.0")]
-    public class Plugin : BasePlugin
+    public class BlindModeMod : MelonMod
     {
-        internal new static ManualLogSource Log;
-
-        public override void Load()
-        {
-            Log = base.Log;
-            TryLoad();
-        }
-
-        private void TryLoad()
+        public override void OnInitializeMelon()
         {
             try
             {
@@ -49,30 +37,13 @@ namespace BlindMode
                 UnityEngine.Object.DontDestroyOnLoad(plugin);
                 plugin.AddComponent<BaseClass>();
                 plugin.hideFlags = HideFlags.HideAndDontSave;
-                new Harmony("radsi.blindmode").PatchAll();
 
-                Log.LogInfo("Plugin has been loaded!");
-                TryPatch();
+                MelonLogger.Msg("Plugin has been loaded!");
             }
             catch (Exception e)
             {
-                Log.LogError("Error loading the plugin!");
-                Log.LogError(e);
-            }
-        }
-
-        private void TryPatch()
-        {
-            try
-            {
-                Log.LogInfo("Attempting to patch...");
-                Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly());
-                Log.LogInfo("Successfully patched!");
-            }
-            catch (Exception e)
-            {
-                Log.LogError("Error registering patch!");
-                Log.LogError(e);
+                MelonLogger.Error("Error loading the plugin!");
+                MelonLogger.Error(e.ToString());
             }
         }
     }
@@ -560,10 +531,10 @@ namespace BlindMode
 
         private enum DuelPositions
         {
-            Normal = 0,
-            Rare = 1,
-            SuperRare = 2,
-            UltraRare = 3
+            Attack = 0,
+            Defense = 1,
+            FaceDownAttack = 2,
+            FaceDownDefense = 3
         }
 
         public static List<string> bannedText = new(){ "00:00", "You can add new Cards to your Deck." };
@@ -586,40 +557,21 @@ namespace BlindMode
         public void Awake()
         {
             Instance = this;
-            CrossSpeakManager.Instance.Initialize();
+            Tolk.TrySAPI(true);
+            Tolk.Load();
+            string screenReader = Tolk.DetectScreenReader();
+            MelonLogger.Msg(screenReader != null
+                ? $"Screen reader detected: {screenReader}"
+                : "No screen reader detected, using SAPI fallback");
         }
 
         public void Start()
         {
-            if (Directory.Exists(Path.Join(Paths.PluginPath, "dependencies"))) return;
-
-            string tempFilePath = Path.Combine(Paths.PluginPath, "directories.zip");
-
-            using (var zipFile = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write))
-            {
-                zipFile.Write(Resource1.dependencies);
-                zipFile.Close();
-            }
-
-            ZipFile.ExtractToDirectory(tempFilePath, Paths.PluginPath);
-            File.Delete(tempFilePath);
-
-            ProcessStartInfo startInfo = new ProcessStartInfo()
-            {
-                FileName = "powershell.exe",
-                Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"Start-Sleep -Seconds 2; Start-Process 'steam://run/1449850'\"",
-                CreateNoWindow = true,
-                UseShellExecute = false
-            };
-
-            Process.Start(startInfo);
-
-            Application.Quit();
         }
 
         public void OnApplicationQuit()
         {
-            CrossSpeakManager.Instance.Close();   
+            Tolk.Unload();
         }
 
         public void Update()
@@ -653,9 +605,9 @@ namespace BlindMode
 
                 text = Regex.Replace(text, @"<[^>]+>", "");
 
-                Plugin.Log.LogInfo($"text to speak: {text}");
+                MelonLogger.Msg($"text to speak: {text}");
 
-                CrossSpeakManager.Instance.Speak(text);
+                Tolk.Output(text, true);
                 textRecord.Add(text);
                 old_copiedText = text;
 
@@ -717,28 +669,28 @@ namespace BlindMode
 
                 /*for (int i = 0; i < ParametersTexts.Count; i++)
                 {
-                    Plugin.Log.LogInfo(ParametersTexts[i]);
+                    MelonLogger.Msg(ParametersTexts[i]);
                 }*/
 
-                //Plugin.Log.LogInfo(1);
+                //MelonLogger.Msg(1);
                 currenElement.Name = ParametersTexts[0].Item2;
-                //Plugin.Log.LogInfo(2);
+                //MelonLogger.Msg(2);
                 currenElement.Description = ParametersTexts.Find(e => e.Item1.Contains("DescriptionValue")).Item2 ?? "";
-                //Plugin.Log.LogInfo(3);
+                //MelonLogger.Msg(3);
                 currenElement.cardInfo.Stars = ParametersTexts.Find(e => e.Item1.Contains("Rank") || e.Item1.Contains("Level")).Item2 ?? "";
-                //Plugin.Log.LogInfo(4);
+                //MelonLogger.Msg(4);
                 currenElement.cardInfo.Atk = ParametersTexts.Find(e => e.Item1.Contains("Atk")).Item2 ?? "";
-                //Plugin.Log.LogInfo(5);
+                //MelonLogger.Msg(5);
                 currenElement.cardInfo.Def = ParametersTexts.Find(e => e.Item1.Contains("Def")).Item2 ?? "";
-                //Plugin.Log.LogInfo(6);
+                //MelonLogger.Msg(6);
                 currenElement.cardInfo.PendulumScale = ParametersTexts.Find(e => e.Item1.Contains("Pendulum")).Item2 ?? "";
-                //Plugin.Log.LogInfo(7);
+                //MelonLogger.Msg(7);
                 currenElement.cardInfo.Link = ParametersTexts.Find(e => e.Item1.Contains("Link")).Item2 ?? "";
-                //Plugin.Log.LogInfo(8);
+                //MelonLogger.Msg(8);
                 currenElement.cardInfo.Element = GetElement(GameObject.Find($"{pathPrefix}/{(pathConditions[0].Condition == false ? (pathConditions[1].Condition ? "TitleArea/PlateTitle/IconAttribute" : "TitleArea/AttributeRoot/IconAttribute") : "TitleAreaGroup/TitleArea/IconAttribute")}").GetComponent<Image>().sprite.name) ?? "";
-                //Plugin.Log.LogInfo(9);
+                //MelonLogger.Msg(9);
                 currenElement.cardInfo.Attributes = ParametersTexts.Find(e => e.Item1.Contains("DescriptionItem")).Item2 ?? "";
-                //Plugin.Log.LogInfo(10);
+                //MelonLogger.Msg(10);
                 currenElement.cardInfo.SpellType = ParametersTexts.Find(e => e.Item1.Contains("SpellTrap")).Item2 ?? "";
                 currenElement.cardInfo.Owned = ParametersTexts.Find(e => e.Item1.Contains("CardNum")).Item2 ?? "";
 
@@ -869,7 +821,7 @@ namespace BlindMode
         {
             if (!IsInDuel) return;
 
-            //Plugin.Log.LogInfo(__instance.name);
+            //MelonLogger.Msg(__instance.name);
 
             if (!(__instance.name.Contains("HandCard") || __instance.name.Contains("Anchor_"))) return;
 
@@ -1015,7 +967,7 @@ namespace BlindMode
         internal static CardRoot GetCardRootOfCurrentCard()
         {
             CardRoot cardRoot = cardsInDuel.Find(e => e.cardLocator.pos == currenElement.cardInfo.cardObject.transform.position);
-            Plugin.Log.LogInfo(cardRoot.name);
+            MelonLogger.Msg(cardRoot.name);
             return cardRoot;
         }
 
@@ -1163,7 +1115,7 @@ namespace BlindMode
 
                 if (objTransform.TryGetComponent(out RubyTextGX rubyTextElement) && !IsBannedText(rubyTextElement.gameObject, rubyTextElement.text, useRegex))
                 {
-                    return textElement.text;
+                    return rubyTextElement.text;
                 }
 
                 rubyChild = objTransform.GetComponentInChildren<RubyTextGX>();
@@ -1180,7 +1132,7 @@ namespace BlindMode
 
                 submeshChild = objTransform.GetComponentInChildren<TMP_SubMeshUI>();
 
-                if (rubyChild != null && !IsBannedText(submeshChild.gameObject, submeshChild.textComponent.text, useRegex))
+                if (submeshChild != null && !IsBannedText(submeshChild.gameObject, submeshChild.textComponent.text, useRegex))
                 {
                     return submeshChild.textComponent.text;
                 }
@@ -1196,5 +1148,61 @@ namespace BlindMode
             return (useRegex && Regex.IsMatch(text, (currentMenu != Menus.NONE || textElement.name.Equals("Button")) ? @"^\s*$" : @"^\s*$|[.!]+$")) || bannedText.Contains(text);
         }
         #endregion
+    }
+
+    public static class Tolk
+    {
+        [DllImport("Tolk", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
+        private static extern void Tolk_Load();
+
+        [DllImport("Tolk", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
+        private static extern void Tolk_Unload();
+
+        [DllImport("Tolk", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
+        private static extern void Tolk_TrySAPI(bool trySAPI);
+
+        [DllImport("Tolk", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
+        private static extern void Tolk_PreferSAPI(bool preferSAPI);
+
+        [DllImport("Tolk", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
+        private static extern IntPtr Tolk_DetectScreenReader();
+
+        [DllImport("Tolk", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
+        private static extern bool Tolk_HasSpeech();
+
+        [DllImport("Tolk", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
+        private static extern bool Tolk_HasBraille();
+
+        [DllImport("Tolk", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
+        private static extern bool Tolk_Output([MarshalAs(UnmanagedType.LPWStr)] string str, bool interrupt);
+
+        [DllImport("Tolk", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
+        private static extern bool Tolk_Speak([MarshalAs(UnmanagedType.LPWStr)] string str, bool interrupt);
+
+        [DllImport("Tolk", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
+        private static extern bool Tolk_Braille([MarshalAs(UnmanagedType.LPWStr)] string str);
+
+        [DllImport("Tolk", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
+        private static extern bool Tolk_IsSpeaking();
+
+        [DllImport("Tolk", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
+        private static extern bool Tolk_Silence();
+
+        public static void Load() => Tolk_Load();
+        public static void Unload() => Tolk_Unload();
+        public static void TrySAPI(bool trySAPI) => Tolk_TrySAPI(trySAPI);
+        public static void PreferSAPI(bool preferSAPI) => Tolk_PreferSAPI(preferSAPI);
+        public static string DetectScreenReader()
+        {
+            IntPtr ptr = Tolk_DetectScreenReader();
+            return ptr != IntPtr.Zero ? Marshal.PtrToStringUni(ptr) : null;
+        }
+        public static bool HasSpeech() => Tolk_HasSpeech();
+        public static bool HasBraille() => Tolk_HasBraille();
+        public static bool Output(string str, bool interrupt = false) => Tolk_Output(str, interrupt);
+        public static bool Speak(string str, bool interrupt = false) => Tolk_Speak(str, interrupt);
+        public static bool Braille(string str) => Tolk_Braille(str);
+        public static bool IsSpeaking() => Tolk_IsSpeaking();
+        public static bool Silence() => Tolk_Silence();
     }
 }
