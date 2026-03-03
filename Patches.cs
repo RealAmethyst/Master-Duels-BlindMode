@@ -135,34 +135,51 @@ namespace BlindMode
 
     #region buttons patches
 
-    [HarmonyPatch(typeof(ColorContainerImage), nameof(ColorContainerImage.SetColor), MethodType.Normal)]
-    class PatchColorContainerImage
-    {
-        [HarmonyPostfix]
-        private static void Postfix(ColorContainerImage __instance)
-        {
-            try
-            {
-                if (__instance.currentStatusMode != ColorContainer.StatusMode.Enter) return;
-
-                textToCopy = "";
-
-                switch (__instance.transform.parent.parent.parent.name)
-                {
-                    case "DuelMenuButton":
-                        textToCopy = $"Menu button";
-                        break;
-                }
-
-                if (textToCopy != "") SpeakText();
-            }
-            catch { }
-        }
-    }
-
     [HarmonyPatch(typeof(ColorContainerGraphic), nameof(ColorContainerGraphic.SetColor))]
     class PatchColorContainerGraphic
     {
+        // Simple parent-level (parent.parent) button name → label mappings
+        private static readonly Dictionary<string, string> parentLabels = new()
+        {
+            { "ButtonMaintenance", "Maintenance" },
+            { "ButtonBug", "Issues" },
+            { "ButtonNotification", "Notification" },
+            { "AutoBuildButton", "Auto-build button" },
+            { "ButtonBookmark", "Add card to bookmark button" },
+            { "BookmarkButton", "Bookmarked cards button" },
+            { "HowToGetButton", "How to get button" },
+            { "RelatedCard", "Related cards button" },
+            { "AddButton", "Add +1" },
+            { "RemoveButton", "Remove -1" },
+            { "CardListButton", "Card list button" },
+            { "HistotyButton", "Card history button" },
+            { "ButtonRegulation", "Regulation button" },
+            { "ButtonSecretPack", "Secret pack button" },
+            { "ButtonInfoSwitching", "Switch display mode button" },
+            { "ButtonSave", "Save button" },
+            { "ButtonMenu", "Menu button" },
+            { "ButtonPickupCard", "Show cards on decks preview" },
+            { "BulkDecksDeletionButton", "Bulk deck deletion button" },
+            { "ButtonOpenNeuronDecks", "Link with Yu Gi Oh Database" },
+            { "FilterButton", "Filters button" },
+            { "SortButton", "Sort button" },
+            { "ClearButton", "Clear filters button" },
+            { "ButtonDismantleIncrement", "Increment dismantle amount" },
+            { "ButtonDismantleDecrement", "Decrement dismantle amount" },
+            { "ButtonEnter", "Play" },
+            { "CopyButton", "Copy deck button" },
+            { "OKButton", "Ok" },
+            { "ShowOwnedNumToggle", "Show owned button" },
+        };
+
+        // Grandparent-level (parent.parent.parent) button name → label mappings
+        private static readonly Dictionary<string, string> grandparentLabels = new()
+        {
+            { "TabMyDeck", "My Deck" },
+            { "TabRental", "Loaner" },
+            { "DuelMenuButton", "Menu button" },
+        };
+
         [HarmonyPostfix]
         static void Postfix(ColorContainerGraphic __instance)
         {
@@ -178,135 +195,46 @@ namespace BlindMode
                 }
 
                 textToCopy = "";
+                string parentName = __instance.transform.parent.parent.name;
 
-                switch (__instance.transform.parent.parent.name)
+                // Dynamic cases that need computed text
+                if (parentName == "DismantleButton")
                 {
-                    case "ButtonMaintenance":
-                        textToCopy = "Maintenance";
-                        break;
-                    case "ButtonBug":
-                        textToCopy = "Issues";
-                        break;
-                    case "ButtonNotification":
-                        textToCopy = "Notification";
-                        break;
-                    case "InputButton":
-                        if (__instance.transform.parent.parent.name.Equals("NameAreaGroup") || currentMenu == Menus.NONE)
-                        {
-                            textToCopy = "Rename button/input";
-                        }
-                        else
-                        {
-                            textToCopy = "Search card input";
-                        }
-                        break;
-                    case "AutoBuildButton":
-                        textToCopy = "Auto-build button";
-                        break;
-                    case "ButtonBookmark":
-                        textToCopy = "Add card to bookmark button";
-                        break;
-                    case "BookmarkButton":
-                        textToCopy = "Bookmarked cards button";
-                        break;
-                    case "HowToGetButton":
-                        textToCopy = "How to get button";
-                        break;
-                    case "RelatedCard":
-                        textToCopy = "Related cards button";
-                        break;
-                    case "DismantleButton":
-                        string dismantle = FindExtendedTextElement(__instance.transform.parent.parent.GetChild(6).gameObject);
-                        textToCopy = $"{(string.IsNullOrEmpty(dismantle) ? "Cant be dismantled" : $"Dismantle card for: {FindExtendedTextElement(__instance.transform.parent.parent.GetChild(6).gameObject)} {GetRarity(__instance.transform.parent.parent.GetChild(6).GetComponentInChildren<Image>().sprite.name)} cp")}";
-                        break;
-                    case "CreateButton":
-                        textToCopy = $"Create card for: {FindExtendedTextElement(__instance.transform.parent.parent.GetChild(6).gameObject)} {GetRarity(__instance.transform.parent.parent.GetChild(6).GetComponentInChildren<Image>().sprite.name)} cp";
-                        break;
-                    case "AddButton":
-                        textToCopy = "Add +1";
-                        break;
-                    case "RemoveButton":
-                        textToCopy = "Remove -1";
-                        break;
-                    case "CardListButton":
-                        textToCopy = "Card list button";
-                        break;
-                    case "HistotyButton": // they dont know how to write "history"
-                        textToCopy = "Card history button";
-                        break;
-                    case "ButtonRegulation":
-                        textToCopy = "Regulation button";
-                        break;
-                    case "ButtonSecretPack":
-                        textToCopy = "Secret pack button";
-                        break;
-                    case "ButtonInfoSwitching":
-                        textToCopy = "Switch display mode button";
-                        break;
-                    case "ButtonSave":
-                        textToCopy = "Save button";
-                        break;
-                    case "ButtonMenu":
-                        textToCopy = "Menu button";
-                        break;
-                    case "ButtonPickupCard":
-                        textToCopy = "Show cards on decks preview";
-                        break;
-                    case "BulkDecksDeletionButton":
-                        textToCopy = "Bulk deck deletion button";
-                        break;
-                    case "ButtonOpenNeuronDecks":
-                        textToCopy = "Link with Yu Gi Oh Database";
-                        break;
-                    case "FilterButton":
-                        textToCopy = "Filters button";
-                        break;
-                    case "SortButton":
-                        textToCopy = "Sort button";
-                        break;
-                    case "ClearButton":
-                        textToCopy = "Clear filters button";
-                        break;
-                    case "Button0":
-                        textToCopy = $"{FindExtendedTextElement(__instance.transform.parent.parent.parent.gameObject)}, lower to higher";
-                        break;
-                    case "Button1":
-                        textToCopy = $"{FindExtendedTextElement(__instance.transform.parent.parent.parent.gameObject)}, higher to lower";
-                        break;
-                    case "ButtonDismantleIncrement":
-                        textToCopy = "Increment dismantle amount";
-                        break;
-                    case "ButtonDismantleDecrement":
-                        textToCopy = "Decrement dismantle amount";
-                        break;
-                    case "ButtonEnter":
-                        textToCopy = "Play";
-                        break;
-                    case "CopyButton":
-                        textToCopy = "Copy deck button";
-                        break;
-                    case "OKButton":
-                        textToCopy = "Ok";
-                        break;
-                    case "ShowOwnedNumToggle":
-                        textToCopy = "Show owned button";
-                        break;
+                    string dismantle = FindExtendedTextElement(__instance.transform.parent.parent.GetChild(6).gameObject);
+                    textToCopy = string.IsNullOrEmpty(dismantle)
+                        ? "Cant be dismantled"
+                        : $"Dismantle card for: {dismantle} {GetRarity(__instance.transform.parent.parent.GetChild(6).GetComponentInChildren<Image>().sprite.name)} cp";
+                }
+                else if (parentName == "CreateButton")
+                {
+                    textToCopy = $"Create card for: {FindExtendedTextElement(__instance.transform.parent.parent.GetChild(6).gameObject)} {GetRarity(__instance.transform.parent.parent.GetChild(6).GetComponentInChildren<Image>().sprite.name)} cp";
+                }
+                else if (parentName == "InputButton")
+                {
+                    textToCopy = currentMenu == Menus.NONE ? "Rename button/input" : "Search card input";
+                }
+                else if (parentName == "Button0")
+                {
+                    textToCopy = $"{FindExtendedTextElement(__instance.transform.parent.parent.parent.gameObject)}, lower to higher";
+                }
+                else if (parentName == "Button1")
+                {
+                    textToCopy = $"{FindExtendedTextElement(__instance.transform.parent.parent.parent.gameObject)}, higher to lower";
+                }
+                else if (parentLabels.TryGetValue(parentName, out string label))
+                {
+                    textToCopy = label;
                 }
 
-                switch (__instance.transform.parent.parent.parent.name)
+                // Grandparent-level lookups (override parent match if found)
+                string grandparentName = __instance.transform.parent.parent.parent.name;
+                if (grandparentName == "ChapterDuel(Clone)")
                 {
-                    case "TabMyDeck":
-                        textToCopy = "My Deck";
-                        break;
-                    case "TabRental":
-                        textToCopy = "Loaner";
-                        break;
-                    case "ChapterDuel(Clone)":
-                        textToCopy = $"Duel, {FindExtendedTextElement(__instance.transform.parent.parent.GetChild(4).gameObject)} stars";
-                        break;
-                    case "DuelMenuButton":
-                        textToCopy = $"Menu button";
-                        break;
+                    textToCopy = $"Duel, {FindExtendedTextElement(__instance.transform.parent.parent.GetChild(4).gameObject)} stars";
+                }
+                else if (grandparentLabels.TryGetValue(grandparentName, out string gpLabel))
+                {
+                    textToCopy = gpLabel;
                 }
 
                 if (textToCopy != "") SpeakText();
