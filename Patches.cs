@@ -239,7 +239,7 @@ namespace BlindMode
 
                 if (textToCopy != "") SpeakText();
             }
-            catch { }
+            catch (System.Exception ex) { DebugLog.Log($"[ColorContainerGraphic] Error: {ex.Message}"); }
         }
     }
 
@@ -247,7 +247,7 @@ namespace BlindMode
     [HarmonyPatch(typeof(SelectionButton), nameof(SelectionButton.OnClick), MethodType.Normal)]
     class PatchOnClick
     {
-        static List<string> previewElements = new() { "CardPict", "CardClone", "CreateButton", "ImageCard", "NextButton", "PrevButton", "Related Cards", "ThumbButton", "SlotTemplate(Clone)", "Locator", "GoldpassRewardButton", "NormalpassRewardButton", "ButtonDuelPass" };
+        static readonly List<string> previewElements = new() { "CardPict", "CardClone", "CreateButton", "ImageCard", "NextButton", "PrevButton", "Related Cards", "ThumbButton", "SlotTemplate(Clone)", "Locator", "GoldpassRewardButton", "NormalpassRewardButton", "ButtonDuelPass" };
 
         [HarmonyPostfix]
         static void Postfix(SelectionButton __instance)
@@ -260,7 +260,7 @@ namespace BlindMode
                     textRecord.Clear();
                 }
             }
-            catch { }
+            catch (System.Exception ex) { DebugLog.Log($"[OnClick] Menu detect error: {ex.Message}"); }
 
             if (__instance.name.Equals("ButtonDecidePositive(Clone)") && IsInDuel)
             {
@@ -318,7 +318,6 @@ namespace BlindMode
                     ProcessNotificationsPopup(__instance);
                     ProcessFriendsMenu(__instance);
                     ProcessProfile(__instance);
-                    //ProcessDailyReward(__instance);
                     ProcessEventBanner(__instance);
                     ProcessTopicsBanner(__instance);
                 break;
@@ -343,9 +342,6 @@ namespace BlindMode
                     ProcessNewDeck(__instance);
                 break;
                 case Menus.SOLO:
-                    ProcessDuelGame(__instance);
-                    ProcessDuelMenu(__instance);
-                break;
                 case Menus.DUEL:
                     ProcessDuelGame(__instance);
                     ProcessDuelMenu(__instance);
@@ -395,7 +391,7 @@ namespace BlindMode
                     currentMenu = Menus.NONE;
                 }
             }
-            catch { }
+            catch (System.Exception ex) { DebugLog.Log($"[OnBack] Error: {ex.Message}"); }
         }
     }
 }
