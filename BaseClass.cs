@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 
@@ -71,60 +70,13 @@ namespace BlindMode
 
             public void Clear()
             {
-                foreach (PropertyInfo property in GetType().GetProperties())
-                {
-                    if (property.PropertyType == typeof(string))
-                    {
-                        property.SetValue(this, string.Empty);
-                    }
-                }
+                cardInfo = new CardCustomInfo();
+                Name = string.Empty;
+                Description = string.Empty;
+                TimeLeft = string.Empty;
+                Price = string.Empty;
             }
 
-            public void LogValues()
-            {
-                foreach (PropertyInfo property in GetType().GetProperties())
-                {
-                    Console.WriteLine($"{property.Name}: {property.GetValue(this)}");
-                }
-            }
-
-            public void CopyValuesFrom(PreviewElement source)
-            {
-                if (source == null) throw new ArgumentNullException(nameof(source));
-
-                foreach (PropertyInfo property in GetType().GetProperties())
-                {
-                    if (property.CanRead && property.CanWrite)
-                    {
-                        var value = property.GetValue(source);
-
-                        if (property.Name == nameof(cardInfo) && value is CardCustomInfo sourceCardInfo)
-                        {
-                            cardInfo = DeepCopy(sourceCardInfo);
-                        }
-                        else
-                        {
-                            property.SetValue(this, value);
-                        }
-                    }
-                }
-            }
-
-            private static T DeepCopy<T>(T source) where T : class, new()
-            {
-                if (source == null) return null;
-
-                var result = new T();
-                foreach (PropertyInfo property in typeof(T).GetProperties())
-                {
-                    if (property.CanRead && property.CanWrite)
-                    {
-                        var value = property.GetValue(source);
-                        property.SetValue(result, value);
-                    }
-                }
-                return result;
-            }
         }
 
         public enum Attribute
@@ -144,14 +96,6 @@ namespace BlindMode
             Rare = 1,
             SuperRare = 2,
             UltraRare = 3
-        }
-
-        private enum DuelPositions
-        {
-            Attack = 0,
-            Defense = 1,
-            FaceDownAttack = 2,
-            FaceDownDefense = 3
         }
 
         public static List<string> bannedText = new(){ "00:00", "You can add new Cards to your Deck.", "ボタン" };
@@ -188,10 +132,6 @@ namespace BlindMode
                 ? $"Screen reader detected: {screenReader}"
                 : "No screen reader detected, using SAPI fallback");
             DebugLog.Log($"[Init] Screen reader: {screenReader ?? "SAPI fallback"}");
-        }
-
-        public void Start()
-        {
         }
 
         public void OnApplicationQuit()
@@ -294,7 +234,6 @@ namespace BlindMode
         internal static CardRoot GetCardRootOfCurrentCard()
         {
             CardRoot cardRoot = cardsInDuel.Find(e => e.cardLocator.pos == currenElement.cardInfo.cardObject.transform.position);
-            MelonLogger.Msg(cardRoot.name);
             return cardRoot;
         }
     }
