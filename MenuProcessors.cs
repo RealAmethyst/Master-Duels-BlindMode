@@ -10,8 +10,6 @@ using Il2CppYgomSystem.UI;
 using Il2CppYgomGame.Duel;
 using Il2CppYgomSystem.YGomTMPro;
 
-using MelonLoader;
-
 using static BlindMode.BaseClass;
 using static BlindMode.UIHelpers;
 

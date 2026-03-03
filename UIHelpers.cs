@@ -10,8 +10,6 @@ using Il2CppTMPro;
 using Il2CppYgomSystem.UI;
 using Il2CppYgomSystem.YGomTMPro;
 
-using MelonLoader;
-
 using static BlindMode.BaseClass;
 
 namespace BlindMode
