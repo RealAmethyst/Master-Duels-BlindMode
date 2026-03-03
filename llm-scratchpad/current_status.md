@@ -6,9 +6,9 @@
 ## Completed Prompts
 - sanity-checks-setup.md
 - information-gathering-and-checking.md
+- code-directory-construction.md
 
 ## Pending Prompts
-- code-directory-construction.md
 - low-level-cleanup.md
 - high-level-cleanup.md
 - large-file-handling.md
@@ -18,6 +18,7 @@
 
 ## Scratchpad Files
 - current_status.md (this file)
+- code-index/ — method/class/field index with line numbers for all 8 source files
 
 ## Documentation Files
 - llm-docs/CLAUDE.md — index of llm-docs
