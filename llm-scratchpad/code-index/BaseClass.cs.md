@@ -3,120 +3,101 @@
 ```
 // File: BaseClass.cs
 namespace BlindMode
-  class BaseClass : MonoBehaviour (line 21)
+  class BaseClass : MonoBehaviour
 
     // --- Singleton ---
-    static BaseClass Instance (line 23)
+    static BaseClass Instance
 
     // --- Duel state ---
-    static List<string> textRecord (line 25)
-    static List<CardRoot> cardsInDuel (line 26)
-    static PreviewElement currenElement (line 28)  // note: typo "curren" in original
+    static List<string> textRecord
+    static List<CardRoot> cardsInDuel
+    static PreviewElement currentElement  // renamed from currenElement
 
     // --- Menu name → enum mapping ---
-    static Dictionary<string, Menus> menuNames (line 30)
+    static Dictionary<string, Menus> menuNames
 
-    enum Menus { NONE, DUEL, DECK, SOLO, SHOP, Missions, Notifications, Settings, DuelPass } (line 42)
-    static Menus currentMenu (line 43)
+    enum Menus { NONE, DUEL, DECK, SOLO, SHOP, Missions, Notifications, Settings, DuelPass }
+    static Menus currentMenu
 
     // --- Screen/dialog tracking ---
-    internal static string lastDialogTitle (line 45)
-    internal static string lastScreenHeader (line 46)
-    internal static string lastFocusViewName (line 47)
+    internal static string lastDialogTitle
+    internal static string lastScreenHeader
+    internal static string lastFocusViewName
 
-    class CardCustomInfo (line 49)
-      GameObject cardObject { get; set; } (line 51)
-      string Link { get; set; } (line 52)
-      string Stars { get; set; } (line 53)
-      string Atk { get; set; } (line 54)
-      string Def { get; set; } (line 55)
-      string PendulumScale { get; set; } (line 56)
-      string Attributes { get; set; } (line 57)
-      string SpellType { get; set; } (line 58)
-      string Element { get; set; } (line 59)
-      string Owned { get; set; } (line 60)
-      bool IsInHand { get; set; } (line 61)
+    class CardCustomInfo
+      GameObject cardObject { get; set; }
+      string Link { get; set; }
+      string Stars { get; set; }
+      string Atk { get; set; }
+      string Def { get; set; }
+      string PendulumScale { get; set; }
+      string Attributes { get; set; }
+      string SpellType { get; set; }
+      string Element { get; set; }
+      string Owned { get; set; }
+      bool IsInHand { get; set; }
 
-    class PreviewElement (line 64)
-      CardCustomInfo cardInfo { get; set; } (line 66)
-      string Name { get; set; } (line 67)
-      string Description { get; set; } (line 68)
-      string TimeLeft { get; set; } (line 69)
-      string Price { get; set; } (line 70)
-      void Clear() (line 72)
-        // Resets all string properties to string.Empty via reflection; does NOT reset cardInfo
-      void LogValues() (line 83)
-        // Prints all property name/value pairs to Console via reflection
-      void CopyValuesFrom(PreviewElement source) (line 91)
-        // Shallow-copies all properties from source; deep-copies cardInfo via DeepCopy<T>()
-      private static T DeepCopy<T>(T source) where T : class, new() (line 113)
-        // Generic reflection-based shallow clone; called only for CardCustomInfo
+    class PreviewElement
+      CardCustomInfo cardInfo { get; set; }
+      string Name { get; set; }
+      string Description { get; set; }
+      string TimeLeft { get; set; }
+      string Price { get; set; }
+      void Clear()
+        // Resets all properties to defaults including cardInfo (direct assignments)
 
-    enum Attribute { Light=1, Dark=2, Water=3, Fire=4, Earth=5, Wind=6, Divine=7 } (line 130)
+    enum Attribute { Light=1, Dark=2, Water=3, Fire=4, Earth=5, Wind=6, Divine=7 }
       // Named BaseClass.Attribute to avoid conflict with System.Attribute
 
-    enum Rarity { Normal=0, Rare=1, SuperRare=2, UltraRare=3 } (line 141)
-
-    private enum DuelPositions { Attack=0, Defense=1, FaceDownAttack=2, FaceDownDefense=3 } (line 149)
+    enum Rarity { Normal=0, Rare=1, SuperRare=2, UltraRare=3 }
 
     // --- Speech / copy state ---
-    static List<string> bannedText (line 157)
-    static string textToCopy (line 158)
-    static string old_copiedText (line 159)
+    static List<string> bannedText
+    static string textToCopy
+    static string old_copiedText
 
     // --- Duel flag ---
-    static bool IsInDuel (line 161)
+    static bool IsInDuel
 
     // --- Speech timing / queuing ---
-    static DateTime lastExecutionTime (line 163)
-    static readonly TimeSpan cooldown (line 164)  // 0.1 s
-    internal static bool queueNextSpeech (line 165)
-      // When true, next SpeakText call appends (queue) rather than interrupts; bypasses cooldown
-    internal static string pendingButtonText (line 166)
-      // Deferred button text; processed in Update() after dialog/screen detection
+    static DateTime lastExecutionTime
+    static readonly TimeSpan cooldown  // 0.1 s
+    internal static bool queueNextSpeech
+    internal static string pendingButtonText
 
     // --- Mouse tracking ---
-    static bool UsingMouse (line 168)
+    static bool UsingMouse
 
     // --- UI scroll reference ---
-    static SnapContentManager SnapContentManager (line 170)
-      // Field type same name as Il2CppYgomSystem.UI.SnapContentManager; use BaseClass.SnapContentManager in UIHelpers to disambiguate
+    static SnapContentManager SnapContentManager
 
     // Download progress tracking
-    internal static DownloadViewController activeDownloadVC (line 173)
-    internal static int lastDownloadPercent (line 174)
+    internal static DownloadViewController activeDownloadVC
+    internal static int lastDownloadPercent
 
-    // Enquete (survey) page tracking — polls until async content loads
-    internal static bool pendingEnqueteCheck (line 177)
-    internal static string lastEnquetePage (line 178)
+    // Enquete (survey) page tracking
+    internal static bool pendingEnqueteCheck
+    internal static string lastEnquetePage
 
     // --- MonoBehaviour lifecycle ---
-    void Awake() (line 180)
-      // Sets Instance, inits DebugLog, loads Tolk with SAPI fallback, detects screen reader
-    void Start() (line 193)
-    void OnApplicationQuit() (line 197)
+    void Awake()
+      // Sets Instance, inits DebugLog, loads Tolk with SAPI fallback
+    void OnApplicationQuit()
       // Unloads Tolk
 
-    void Update() (line 202)
+    void Update()
       // Handles Space (read LP) and LeftAlt (CopyUI) in duel.
       // Calls CheckDialogTitle(), CheckScreenChange(), CheckDownloadProgress(), CheckEnqueteScreen().
-      // Flushes pendingButtonText AFTER dialog/screen checks so dialog headers speak first.
+      // Flushes pendingButtonText AFTER dialog/screen checks.
 
     // --- Speech helpers ---
-    internal static void SpeakText(string text = "") (line 236)
-      // Speaks text immediately (interrupt) or queued depending on queueNextSpeech.
-      // Strips HTML tags. Skips duplicates, empty strings, and bannedText entries.
-      // Bypasses cooldown when queueNextSpeech is true.
-    internal static void SpeakScreenHeader(string text) (line 267)
-      // Speaks a screen/dialog header as an interrupting utterance, then sets
-      // queueNextSpeech=true so the next SpeakText call queues behind it.
-      // Resets old_copiedText to allow button re-announcement after navigation.
+    internal static void SpeakText(string text = "")
+      // Speaks text (interrupt or queued). Strips tags via StripTags().
+    internal static void SpeakScreenHeader(string text)
+      // Speaks header as interrupt, sets queueNextSpeech=true.
 
     // --- UI utilities ---
-    void CopyUI() (line 283)
-      // Calls GetUITextElements() then speaks FormatInfo() result
-    internal static void DeselectButton() (line 289)
-      // Clears old_copiedText so next focus event re-speaks the same text
-    internal static CardRoot GetCardRootOfCurrentCard() (line 294)
-      // Finds CardRoot in cardsInDuel whose position matches currenElement's card object transform
+    void CopyUI()
+    internal static void DeselectButton()
+    internal static CardRoot GetCardRootOfCurrentCard()
 ```
