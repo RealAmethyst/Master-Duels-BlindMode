@@ -5,8 +5,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-using System.Text.RegularExpressions;
-
 using Il2CppTMPro;
 using Il2CppYgomSystem.UI;
 using Il2CppYgomSystem.YGomTMPro;
@@ -373,7 +371,7 @@ namespace BlindMode
                         var tmp = sibling.GetComponent<TMP_Text>();
                         if (tmp != null && tmp.gameObject.activeInHierarchy)
                         {
-                            string clean = Regex.Replace(tmp.text ?? "", @"<[^>]+>", "").Trim();
+                            string clean = StripTags(tmp.text ?? "").Trim();
                             if (!string.IsNullOrEmpty(clean))
                             {
                                 textToCopy = clean;

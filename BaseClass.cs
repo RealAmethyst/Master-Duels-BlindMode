@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Collections.Generic;
 
 using UnityEngine;
@@ -182,7 +181,7 @@ namespace BlindMode
                 if (!string.IsNullOrEmpty(old_copiedText) && old_copiedText.Equals(text)) return;
                 if (string.IsNullOrEmpty(text?.Trim()) || bannedText.Contains(text)) return;
 
-                text = Regex.Replace(text, @"<[^>]+>", "");
+                text = StripTags(text);
 
                 MelonLogger.Msg($"text to speak: {text}");
                 DebugLog.Log($"[Speech] {text}");
@@ -209,7 +208,7 @@ namespace BlindMode
             if (string.IsNullOrEmpty(text?.Trim())) return;
             if (text == lastScreenHeader) return;
 
-            text = Regex.Replace(text, @"<[^>]+>", "");
+            text = StripTags(text);
             lastScreenHeader = text;
             old_copiedText = "";
 

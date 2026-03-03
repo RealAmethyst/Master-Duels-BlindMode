@@ -18,6 +18,9 @@ namespace BlindMode
 {
     public static class UIHelpers
     {
+        internal static string StripTags(string text) =>
+            string.IsNullOrEmpty(text) ? text : Regex.Replace(text, @"<[^>]+>", "");
+
         public static string GetElement(string attrname)
         {
             if (int.TryParse(attrname.Last().ToString(), out int num))

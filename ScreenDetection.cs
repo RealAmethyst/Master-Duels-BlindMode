@@ -1,8 +1,6 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
-
 using UnityEngine;
 
 using Il2CppTMPro;
@@ -107,7 +105,7 @@ namespace BlindMode
                                 string rawText = tmp.text;
                                 if (string.IsNullOrEmpty(rawText?.Trim())) continue;
 
-                                string cleanText = Regex.Replace(rawText, @"<[^>]+>", "").Trim();
+                                string cleanText = StripTags(rawText).Trim();
                                 if (string.IsNullOrEmpty(cleanText)) continue;
 
                                 textElements.Add((label, cleanText));
@@ -142,7 +140,7 @@ namespace BlindMode
                                 string rawText = tmp.text;
                                 if (string.IsNullOrEmpty(rawText?.Trim())) continue;
 
-                                string cleanText = Regex.Replace(rawText, @"<[^>]+>", "").Trim();
+                                string cleanText = StripTags(rawText).Trim();
                                 if (string.IsNullOrEmpty(cleanText)) continue;
 
                                 string path = $"{tmp.transform.parent?.name ?? "root"}/{tmp.name}";
@@ -175,7 +173,7 @@ namespace BlindMode
                             string rawText = tmp.text;
                             if (string.IsNullOrEmpty(rawText?.Trim())) continue;
 
-                            string cleanText = Regex.Replace(rawText, @"<[^>]+>", "").Trim();
+                            string cleanText = StripTags(rawText).Trim();
                             if (string.IsNullOrEmpty(cleanText)) continue;
 
                             string path = $"{tmp.transform.parent?.name ?? "root"}/{tmp.name}";
@@ -257,7 +255,7 @@ namespace BlindMode
                     if (tmp == null || !tmp.gameObject.activeInHierarchy) continue;
                     string text = tmp.text?.Trim();
                     if (string.IsNullOrEmpty(text)) continue;
-                    text = Regex.Replace(text, @"<[^>]+>", "").Trim();
+                    text = StripTags(text).Trim();
                     if (string.IsNullOrEmpty(text) || bannedText.Contains(text)) continue;
 
                     string pathLower = $"{tmp.transform.parent?.name}/{tmp.name}".ToLower();
@@ -277,7 +275,7 @@ namespace BlindMode
                         if (tmp == null || !tmp.gameObject.activeInHierarchy) continue;
                         string text = tmp.text?.Trim();
                         if (string.IsNullOrEmpty(text)) continue;
-                        text = Regex.Replace(text, @"<[^>]+>", "").Trim();
+                        text = StripTags(text).Trim();
                         if (text == title) { pastTitle = true; continue; }
                         if (!pastTitle) continue;
                         if (text.Length < 30) continue;
@@ -361,7 +359,7 @@ namespace BlindMode
                                 string rawText = tmp.text;
                                 if (string.IsNullOrEmpty(rawText?.Trim())) continue;
 
-                                string cleanText = Regex.Replace(rawText, @"<[^>]+>", "").Trim();
+                                string cleanText = StripTags(rawText).Trim();
                                 if (string.IsNullOrEmpty(cleanText)) continue;
 
                                 string parentName = tmp.transform.parent?.name ?? "";
@@ -461,7 +459,7 @@ namespace BlindMode
             {
                 string t = tmpText.text;
                 if (!string.IsNullOrEmpty(t?.Trim()))
-                    return Regex.Replace(t, @"<[^>]+>", "").Trim();
+                    return StripTags(t).Trim();
             }
 
             return null;
@@ -513,7 +511,7 @@ namespace BlindMode
                         if (tmp == null || !tmp.gameObject.activeInHierarchy) continue;
                         string t = tmp.text;
                         if (string.IsNullOrEmpty(t?.Trim())) continue;
-                        string clean = Regex.Replace(t, @"<[^>]+>", "").Trim();
+                        string clean = StripTags(t).Trim();
                         if (!string.IsNullOrEmpty(clean))
                         {
                             DebugLog.Log($"[HeaderVC] fallback text = {clean}");
@@ -713,7 +711,7 @@ namespace BlindMode
                     if (tmp == null || !tmp.gameObject.activeInHierarchy) continue;
                     string rawText = tmp.text?.Trim();
                     if (string.IsNullOrEmpty(rawText)) continue;
-                    string clean = Regex.Replace(rawText, @"<[^>]+>", "").Trim();
+                    string clean = StripTags(rawText).Trim();
                     if (string.IsNullOrEmpty(clean)) continue;
 
                     // Skip page indicator, button labels, and very short text
