@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+using Il2CppTMPro;
 using Il2CppYgomSystem.UI;
 using Il2CppYgomGame.Duel;
 using Il2CppYgomSystem.YGomTMPro;
@@ -72,6 +73,63 @@ namespace BlindMode
             {
 
             }
+
+            // Solo chapter map: read chapter type and level from the button's parent hierarchy
+            // Parent names like ChapterDuel, ChapterScenario, ChapterGoal, ChapterPractice etc.
+            try
+            {
+                ProcessSoloChapter(__instance);
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// Process solo chapter map buttons. Each chapter node has a parent named
+        /// "ChapterDuel", "ChapterScenario", "ChapterGoal", "ChapterPractice", etc.
+        /// The button contains TextName (chapter name) and optionally Level/TextLevel.
+        /// </summary>
+        private static void ProcessSoloChapter(SelectionButton __instance)
+        {
+            // Check if this button is inside a Chapter* container on the chapter map
+            string chapterType = null;
+            Transform current = __instance.transform.parent;
+            for (int i = 0; i < 4 && current != null; i++)
+            {
+                if (current.name.StartsWith("Chapter"))
+                {
+                    chapterType = current.name;
+                    break;
+                }
+                current = current.parent;
+            }
+            if (chapterType == null) return;
+
+            // Extract a readable type name from "ChapterDuel" → "Duel", "ChapterPractice" → "Practice"
+            string typeName = chapterType.StartsWith("Chapter") ? chapterType.Substring(7) : chapterType;
+
+            // Try to find level text in siblings
+            string level = null;
+            try
+            {
+                var levelTransform = __instance.transform.parent.Find("Level");
+                if (levelTransform != null)
+                {
+                    var levelTmp = levelTransform.GetComponentInChildren<TMP_Text>(true);
+                    if (levelTmp != null && !string.IsNullOrEmpty(levelTmp.text?.Trim()))
+                        level = levelTmp.text.Trim();
+                }
+            }
+            catch { }
+
+            // Build the announcement: "Chapter1, Duel, Level 5"
+            string extra = typeName;
+            if (!string.IsNullOrEmpty(level))
+                extra += $", Level {level}";
+
+            if (!string.IsNullOrEmpty(textToCopy))
+                textToCopy += $", {extra}";
+            else
+                textToCopy = extra;
         }
 
         internal static void ProcessDuelGame(SelectionButton __instance)

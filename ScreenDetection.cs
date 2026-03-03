@@ -59,11 +59,11 @@ namespace BlindMode
             ElementObjectManager eom = GetViewFromVC(vc);
             if (eom == null)
             {
-                DebugLog.Log($"[FindTitle] No m_View on: {vc.name}");
-                return null;
+                DebugLog.Log($"[FindTitle] No m_View on: {vc.name}, trying VC scan fallback");
             }
 
-            DebugLog.Log($"[FindTitle] Got m_View: {eom.name} for VC: {vc.name}");
+            if (eom != null)
+                DebugLog.Log($"[FindTitle] Got m_View: {eom.name} for VC: {vc.name}");
 
             string title = null;
             string message = null;
@@ -72,86 +72,89 @@ namespace BlindMode
             // Approach 1: Use EOM's serializedElements array (game's own element system)
             // Only use leaf elements (skip container labels like Root, RootContent, RootBottom)
             // to avoid duplicate text from parent/child overlaps
-            try
-            {
-                var serialized = eom.serializedElements;
-                if (serialized != null && serialized.Length > 0)
-                {
-                    DebugLog.Log($"[FindTitle] serializedElements count: {serialized.Length}");
-
-                    // Collect all element labels that are containers (have children that are also elements)
-                    var containerLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                        { "Root", "RootContent", "RootBottom" };
-
-                    foreach (var elem in serialized)
-                    {
-                        if (elem == null) continue;
-                        string label = elem.label;
-                        if (string.IsNullOrEmpty(label)) continue;
-
-                        // Skip container elements to avoid duplicate text
-                        if (containerLabels.Contains(label)) continue;
-
-                        GameObject go = elem.gameObject;
-                        if (go == null) continue;
-
-                        // Search for TMP_Text on this element and its children (include inactive)
-                        var tmpTexts = go.GetComponentsInChildren<TMP_Text>(true);
-                        if (tmpTexts == null) continue;
-
-                        foreach (var tmp in tmpTexts)
-                        {
-                            if (tmp == null) continue;
-                            string rawText = tmp.text;
-                            if (string.IsNullOrEmpty(rawText?.Trim())) continue;
-
-                            string cleanText = Regex.Replace(rawText, @"<[^>]+>", "").Trim();
-                            if (string.IsNullOrEmpty(cleanText)) continue;
-
-                            textElements.Add((label, cleanText));
-                            DebugLog.Log($"[EOM] {vc.name} | [{label}] {tmp.transform.parent?.name}/{tmp.name} = {cleanText}");
-                        }
-                    }
-                }
-                else
-                {
-                    DebugLog.Log($"[FindTitle] serializedElements is null or empty for: {eom.name}");
-                }
-            }
-            catch (Exception ex)
-            {
-                DebugLog.Log($"[FindTitle] Error reading serializedElements: {ex.Message}");
-            }
-
-            // Approach 2: Fall back to scanning all TMP_Text in the EOM hierarchy (includeInactive=true)
-            if (textElements.Count == 0)
+            if (eom != null)
             {
                 try
                 {
-                    var allText = eom.gameObject.GetComponentsInChildren<TMP_Text>(true);
-                    DebugLog.Log($"[FindTitle] Fallback TMP_Text scan count: {allText?.Length ?? 0}");
-
-                    if (allText != null)
+                    var serialized = eom.serializedElements;
+                    if (serialized != null && serialized.Length > 0)
                     {
-                        foreach (var tmp in allText)
+                        DebugLog.Log($"[FindTitle] serializedElements count: {serialized.Length}");
+
+                        // Collect all element labels that are containers (have children that are also elements)
+                        var containerLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                            { "Root", "RootContent", "RootBottom" };
+
+                        foreach (var elem in serialized)
                         {
-                            if (tmp == null) continue;
+                            if (elem == null) continue;
+                            string label = elem.label;
+                            if (string.IsNullOrEmpty(label)) continue;
 
-                            string rawText = tmp.text;
-                            if (string.IsNullOrEmpty(rawText?.Trim())) continue;
+                            // Skip container elements to avoid duplicate text
+                            if (containerLabels.Contains(label)) continue;
 
-                            string cleanText = Regex.Replace(rawText, @"<[^>]+>", "").Trim();
-                            if (string.IsNullOrEmpty(cleanText)) continue;
+                            GameObject go = elem.gameObject;
+                            if (go == null) continue;
 
-                            string path = $"{tmp.transform.parent?.name ?? "root"}/{tmp.name}";
-                            textElements.Add((path, cleanText));
-                            DebugLog.Log($"[EOM-fallback] {vc.name} | {path} = {cleanText}");
+                            // Search for TMP_Text on this element and its children (include inactive)
+                            var tmpTexts = go.GetComponentsInChildren<TMP_Text>(true);
+                            if (tmpTexts == null) continue;
+
+                            foreach (var tmp in tmpTexts)
+                            {
+                                if (tmp == null) continue;
+                                string rawText = tmp.text;
+                                if (string.IsNullOrEmpty(rawText?.Trim())) continue;
+
+                                string cleanText = Regex.Replace(rawText, @"<[^>]+>", "").Trim();
+                                if (string.IsNullOrEmpty(cleanText)) continue;
+
+                                textElements.Add((label, cleanText));
+                                DebugLog.Log($"[EOM] {vc.name} | [{label}] {tmp.transform.parent?.name}/{tmp.name} = {cleanText}");
+                            }
                         }
+                    }
+                    else
+                    {
+                        DebugLog.Log($"[FindTitle] serializedElements is null or empty for: {eom.name}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    DebugLog.Log($"[FindTitle] Error in fallback scan: {ex.Message}");
+                    DebugLog.Log($"[FindTitle] Error reading serializedElements: {ex.Message}");
+                }
+
+                // Approach 2: Fall back to scanning all TMP_Text in the EOM hierarchy (includeInactive=true)
+                if (textElements.Count == 0)
+                {
+                    try
+                    {
+                        var allText = eom.gameObject.GetComponentsInChildren<TMP_Text>(true);
+                        DebugLog.Log($"[FindTitle] Fallback TMP_Text scan count: {allText?.Length ?? 0}");
+
+                        if (allText != null)
+                        {
+                            foreach (var tmp in allText)
+                            {
+                                if (tmp == null) continue;
+
+                                string rawText = tmp.text;
+                                if (string.IsNullOrEmpty(rawText?.Trim())) continue;
+
+                                string cleanText = Regex.Replace(rawText, @"<[^>]+>", "").Trim();
+                                if (string.IsNullOrEmpty(cleanText)) continue;
+
+                                string path = $"{tmp.transform.parent?.name ?? "root"}/{tmp.name}";
+                                textElements.Add((path, cleanText));
+                                DebugLog.Log($"[EOM-fallback] {vc.name} | {path} = {cleanText}");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        DebugLog.Log($"[FindTitle] Error in fallback scan: {ex.Message}");
+                    }
                 }
             }
 
@@ -528,6 +531,42 @@ namespace BlindMode
             return null;
         }
 
+        /// <summary>
+        /// Map VC names to menu contexts so button processors work correctly
+        /// even when the player didn't click a menu button to get there.
+        /// </summary>
+        private static readonly Dictionary<string, Menus> vcNameToMenu = new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "SoloMode", Menus.SOLO },
+            { "SoloGate", Menus.SOLO },
+            { "SoloSelectChapter", Menus.SOLO },
+            { "DuelClient", Menus.DUEL },
+            { "DuelLive", Menus.DUEL },
+            { "DeckEdit", Menus.DECK },
+            { "DeckBrowser", Menus.DECK },
+            { "Shop", Menus.SHOP },
+            { "SettingMenuViewController", Menus.Settings },
+        };
+
+        private static void UpdateMenuFromVC(string cleanName)
+        {
+            if (vcNameToMenu.TryGetValue(cleanName, out Menus menu))
+            {
+                currentMenu = menu;
+                DebugLog.Log($"[MenuFromVC] Set currentMenu to {menu} from VC: {cleanName}");
+            }
+            else
+            {
+                // Reset to NONE for unknown VCs to prevent stale menu context
+                // from causing crashes (e.g. ProcessSettingsMenu on non-settings buttons)
+                if (currentMenu != Menus.NONE)
+                {
+                    DebugLog.Log($"[MenuFromVC] Reset currentMenu from {currentMenu} to NONE for VC: {cleanName}");
+                    currentMenu = Menus.NONE;
+                }
+            }
+        }
+
         internal static void CheckScreenChange()
         {
             try
@@ -547,6 +586,11 @@ namespace BlindMode
                 lastFocusViewName = vcName;
 
                 string cleanName = vcName.EndsWith("(Clone)") ? vcName[..^7] : vcName;
+
+                // Update currentMenu based on VC name so button processors use the right menu context.
+                // This handles cases where the player navigates to a menu without clicking a menu button
+                // (e.g. tutorial flow auto-directing to Solo mode, or backing out of settings).
+                UpdateMenuFromVC(cleanName);
 
                 if (cleanName == "GameEntryV1" || cleanName == "GameEntrySequenceV2") return;
 

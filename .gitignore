@@ -3,3 +3,5 @@ obj/
 libs/
 dump.cs.txt
 *.user
+.claude/
+BlindMode_debug.log

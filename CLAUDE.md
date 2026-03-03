@@ -1,0 +1,47 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+BlindMode is a MelonLoader accessibility mod for Yu-Gi-Oh Master Duel (Unity 6 / Il2Cpp). It provides screen reader support via Tolk.dll so blind players can navigate menus, read cards, and play duels.
+
+## Build
+
+```bash
+"/c/Program Files/dotnet/dotnet.exe" build BlindMode.csproj
+```
+
+Target: net6.0. Output: `bin/Debug/net6.0/BlindMode.dll`. System `dotnet` is not on PATH; use the full path above.
+
+## Architecture
+
+All code lives in `namespace BlindMode` with extensive `using static` imports between files.
+
+**Plugin.cs** - MelonMod entry point. Registers `BaseClass` in Il2Cpp, creates a persistent GameObject.
+
+**BaseClass.cs** - Core MonoBehaviour singleton. Owns all shared state as public static fields (`currentMenu`, `IsInDuel`, `queueNextSpeech`, `pendingButtonText`, etc.). Houses `Update()` which coordinates polling for dialogs, screen changes, downloads, and deferred speech. Contains `SpeakText()` (with cooldown/dedup) and `SpeakScreenHeader()` (sets queue flag). Also defines nested types: `CardCustomInfo`, `PreviewElement`, `Attribute`/`Rarity`/`DuelPositions` enums.
+
+**ScreenDetection.cs** - Detects screen/dialog changes and announces them. `FindScreenTitle()` extracts titles from `ElementObjectManager.serializedElements` arrays. Dialog detection uses both OnCreatedView patches (immediate) and `CheckDialogTitle()` polling (fallback). `CheckScreenChange()` maps ViewController names to menu contexts.
+
+**MenuProcessors.cs** - Per-menu button text enhancement methods (`ProcessProfile`, `ProcessDuelGame`, `ProcessDecksMenu`, etc.) called from patches based on `currentMenu`.
+
+**Patches.cs** - All Harmony postfix patches. Intercepts button focus/selection, duel events (LP changes, card setup), dialog creation (OnCreatedView), and navigation (OnBack). `PatchOnSelected` is the main button handler that defers speech to `pendingButtonText` and delegates to MenuProcessors.
+
+**UIHelpers.cs** - Static utilities for finding text elements (`FindExtendedTextElement`, `FindListExtendedTextElement`), building card/item info (`GetUITextElements`, `FormatInfo`), and text filtering (`IsBannedText`).
+
+**Tolk.cs** - P/Invoke interop to Tolk.dll screen reader library. `Output(text, interrupt)` is the core call.
+
+**DebugLog.cs** - Thread-safe file logging to `BlindMode_debug.log`.
+
+## Key Patterns
+
+- **Speech flow**: `SpeakScreenHeader()` interrupts and sets `queueNextSpeech=true`. The next `SpeakText()` call queues instead of interrupting, ensuring headers speak before button text.
+- **Deferred button speech**: Patches store text in `pendingButtonText` rather than speaking immediately. `Update()` processes it after dialog/screen detection, so dialog headers always come first.
+- **Il2Cpp type conflicts**: `Attribute` enum conflicts with `System.Attribute` — use `BaseClass.Attribute`. `SnapContentManager` field conflicts with `Il2CppYgomSystem.UI.SnapContentManager` type — use `BaseClass.SnapContentManager`.
+- **All Harmony patches are postfix** (no prefix patches). Patched methods use Il2Cpp type names.
+- **Async UI handling**: Some ViewControllers (EnqueteViewController, DownloadViewController) load content asynchronously. Polling flags (`pendingEnqueteCheck`, `activeDownloadVC`) coordinate detection in `Update()`.
+
+## Dependencies
+
+Game assemblies and MelonLoader DLLs are referenced from a `lib/` directory (gitignored). The decompiled game type reference `dump.cs.txt` is also gitignored.
