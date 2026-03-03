@@ -131,9 +131,17 @@ namespace BlindMode
 
         public static bool IsBannedText(GameObject textElement, string text, bool useRegex)
         {
-            if (textElement == null || string.IsNullOrEmpty(text) || (textElement.gameObject.activeInHierarchy == false)) return true;
+            if (textElement == null || string.IsNullOrEmpty(text)) return true;
+            if (!textElement.gameObject.activeInHierarchy) return true;
+            if (bannedText.Contains(text)) return true;
+            if (!useRegex) return false;
 
-            return (useRegex && Regex.IsMatch(text, (currentMenu != Menus.NONE || textElement.name.Equals("Button")) ? @"^\s*$" : @"^\s*$|[.!]+$")) || bannedText.Contains(text);
+            // In menus or for Button elements, only skip whitespace-only text.
+            // Otherwise also skip text ending with just punctuation (likely incomplete/placeholder).
+            string pattern = (currentMenu != Menus.NONE || textElement.name.Equals("Button"))
+                ? @"^\s*$"
+                : @"^\s*$|[.!]+$";
+            return Regex.IsMatch(text, pattern);
         }
 
         public static string GetSelectionPosition(SelectionButton button)
