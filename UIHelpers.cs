@@ -42,7 +42,7 @@ namespace BlindMode
             if (obj.TryGetComponent(out RubyTextGX rubyTextElement) && !IsBannedText(rubyTextElement.gameObject, rubyTextElement.text, useRegex))
                 resultList.Add(($"{rubyTextElement.transform.parent.name}/{rubyTextElement.name}", rubyTextElement.text));
             if (obj.TryGetComponent(out TMP_SubMeshUI submeshTextElement) && !IsBannedText(submeshTextElement.gameObject, submeshTextElement.m_TextComponent.text, useRegex))
-                resultList.Add(($"{submeshTextElement.transform.parent.name}/{submeshTextElement.name}", submeshTextElement.textComponent.text));
+                resultList.Add(($"{submeshTextElement.transform.parent.name}/{submeshTextElement.name}", submeshTextElement.m_TextComponent.text));
 
             resultList.AddRange(FindInChildrenList(obj, null, useRegex));
 
@@ -92,9 +92,9 @@ namespace BlindMode
                 }
 
                 if (objTransform.TryGetComponent(out TMP_SubMeshUI submeshTextElement) &&
-                    !IsBannedText(submeshTextElement.gameObject, submeshTextElement.textComponent.text, useRegex))
+                    !IsBannedText(submeshTextElement.gameObject, submeshTextElement.m_TextComponent.text, useRegex))
                 {
-                    resultList.Add(($"{submeshTextElement.transform.parent.name}/{submeshTextElement.name}", submeshTextElement.textComponent.text));
+                    resultList.Add(($"{submeshTextElement.transform.parent.name}/{submeshTextElement.name}", submeshTextElement.m_TextComponent.text));
                 }
 
                 if(objTransform.childCount > 0)
@@ -124,8 +124,8 @@ namespace BlindMode
                     return ruby.text;
 
                 var submesh = child.GetComponentInChildren<TMP_SubMeshUI>();
-                if (submesh != null && !IsBannedText(submesh.gameObject, submesh.textComponent.text, useRegex))
-                    return submesh.textComponent.text;
+                if (submesh != null && !IsBannedText(submesh.gameObject, submesh.m_TextComponent.text, useRegex))
+                    return submesh.m_TextComponent.text;
             }
 
             return null;
