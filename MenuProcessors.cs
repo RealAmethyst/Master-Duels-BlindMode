@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Collections.Generic;
 
@@ -67,9 +68,9 @@ namespace BlindMode
                     textToCopy = $"{soloElements.Last().Item2}, {soloElements.Find(e => e.Item1.Contains("Complete")).Item2}";
                 }
             }
-            catch
+            catch (Exception ex)
             {
-
+                DebugLog.Log($"[ProcessDuelMenu] {ex.Message}");
             }
 
             ProcessSoloChapter(__instance);
@@ -111,7 +112,7 @@ namespace BlindMode
                         level = levelTmp.text.Trim();
                 }
             }
-            catch { }
+            catch (Exception ex) { DebugLog.Log($"[ProcessSoloChapter] {ex.Message}"); }
 
             // Build the announcement: "Chapter1, Duel, Level 5"
             string extra = typeName;
@@ -151,9 +152,9 @@ namespace BlindMode
                     SpeakText("Opponent's face down card!");
                 }
             }
-            catch
+            catch (Exception ex)
             {
-
+                DebugLog.Log($"[ProcessDuelGame] {ex.Message}");
             }
         }
 

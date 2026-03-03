@@ -375,7 +375,7 @@ namespace BlindMode
                 if (!foundActiveDialog)
                     lastDialogTitle = "";
             }
-            catch { }
+            catch (Exception ex) { DebugLog.Log($"[CheckDialogTitle] {ex.Message}"); }
         }
 
         /// <summary>
@@ -583,7 +583,7 @@ namespace BlindMode
                 GameObject contentCanvas = GameObject.Find("UI/ContentCanvas");
                 QueueFocusedItem(contentCanvas ?? focusVC.gameObject);
             }
-            catch { }
+            catch (Exception ex) { DebugLog.Log($"[CheckScreenChange] {ex.Message}"); }
         }
 
         /// <summary>
@@ -732,7 +732,7 @@ namespace BlindMode
                     }
                 }
             }
-            catch { }
+            catch (Exception ex) { DebugLog.Log($"[QueueFocusedItem] {ex.Message}"); }
         }
     }
 }

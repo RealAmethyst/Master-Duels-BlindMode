@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using MelonLoader;
 
 namespace BlindMode
 {
@@ -20,7 +21,7 @@ namespace BlindMode
                     File.WriteAllText(_logPath, $"[{DateTime.Now:HH:mm:ss.fff}] === BlindMode Debug Log Started ===\n");
                 }
             }
-            catch { }
+            catch (Exception ex) { MelonLogger.Warning($"[DebugLog.Init] {ex.Message}"); }
         }
 
         public static void Log(string message)
@@ -34,7 +35,7 @@ namespace BlindMode
                     File.AppendAllText(_logPath, $"[{DateTime.Now:HH:mm:ss.fff}] {message}\n");
                 }
             }
-            catch { }
+            catch (Exception ex) { MelonLogger.Warning($"[DebugLog.Log] {ex.Message}"); }
         }
     }
 }

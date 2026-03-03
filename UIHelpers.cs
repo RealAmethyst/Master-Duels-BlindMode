@@ -166,7 +166,7 @@ namespace BlindMode
                 if (found && total > 1)
                     return $", {index} of {total}";
             }
-            catch { }
+            catch (Exception ex) { DebugLog.Log($"[GetSelectionPosition] {ex.Message}"); }
             return null;
         }
 
