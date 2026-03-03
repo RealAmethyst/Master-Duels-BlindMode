@@ -266,7 +266,7 @@ namespace BlindMode
             {
                 IsInDuel = false;
                 cardsInDuel.Clear();
-                currenElement.Clear();
+                currentElement.Clear();
             }
 
             if (previewElements.Contains(__instance.name))

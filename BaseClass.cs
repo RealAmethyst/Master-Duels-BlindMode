@@ -23,7 +23,7 @@ namespace BlindMode
         public static List<string> textRecord = new();
         public static List<CardRoot> cardsInDuel = new();
 
-        public static PreviewElement currenElement = new();
+        public static PreviewElement currentElement = new();
 
         public static Dictionary<string, Menus> menuNames = new()
         {
@@ -150,7 +150,7 @@ namespace BlindMode
 
                 if (Input.GetKeyDown(KeyCode.LeftAlt))
                 {
-                    currenElement.Clear();
+                    currentElement.Clear();
                     CardInfo cardInfo = FindObjectOfType<CardInfo>();
                     if(!cardInfo.gameObject.activeInHierarchy) cardInfo.gameObject.SetActive(true);
                     CopyUI();
@@ -232,7 +232,7 @@ namespace BlindMode
 
         internal static CardRoot GetCardRootOfCurrentCard()
         {
-            CardRoot cardRoot = cardsInDuel.Find(e => e.cardLocator.pos == currenElement.cardInfo.cardObject.transform.position);
+            CardRoot cardRoot = cardsInDuel.Find(e => e.cardLocator.pos == currentElement.cardInfo.cardObject.transform.position);
             return cardRoot;
         }
     }

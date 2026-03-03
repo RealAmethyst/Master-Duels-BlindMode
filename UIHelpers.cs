@@ -196,8 +196,8 @@ namespace BlindMode
             if (BaseClass.SnapContentManager == null && !(currentMenu == Menus.DECK || currentMenu == Menus.SOLO || currentMenu == Menus.DUEL))
             {
                 List<(string, string)> textElements = FindListExtendedTextElement(null, "UI/OverlayCanvas/DialogManager/ItemPreview/ItemPreviewUI(Clone)/Root/RootMainArea/DescArea/RootDesc/", false);
-                currenElement.Name = $"{(textElements.Count > 2 ? $"{textElements.First().Item2} - " : "")}{textElements[textElements.Count - 2].Item2}";
-                currenElement.Description = textElements.Last().Item2;
+                currentElement.Name = $"{(textElements.Count > 2 ? $"{textElements.First().Item2} - " : "")}{textElements[textElements.Count - 2].Item2}";
+                currentElement.Description = textElements.Last().Item2;
                 return;
             }
 
@@ -222,17 +222,17 @@ namespace BlindMode
 
                 List<(string, string)> ParametersTexts = FindListExtendedTextElement(null, pathPrefix);
 
-                currenElement.Name = ParametersTexts[0].Item2;
-                currenElement.Description = ParametersTexts.Find(e => e.Item1.Contains("DescriptionValue")).Item2 ?? "";
-                currenElement.cardInfo.Stars = ParametersTexts.Find(e => e.Item1.Contains("Rank") || e.Item1.Contains("Level")).Item2 ?? "";
-                currenElement.cardInfo.Atk = ParametersTexts.Find(e => e.Item1.Contains("Atk")).Item2 ?? "";
-                currenElement.cardInfo.Def = ParametersTexts.Find(e => e.Item1.Contains("Def")).Item2 ?? "";
-                currenElement.cardInfo.PendulumScale = ParametersTexts.Find(e => e.Item1.Contains("Pendulum")).Item2 ?? "";
-                currenElement.cardInfo.Link = ParametersTexts.Find(e => e.Item1.Contains("Link")).Item2 ?? "";
-                currenElement.cardInfo.Element = GetElement(GameObject.Find($"{pathPrefix}/{(pathConditions[0].Condition == false ? (pathConditions[1].Condition ? "TitleArea/PlateTitle/IconAttribute" : "TitleArea/AttributeRoot/IconAttribute") : "TitleAreaGroup/TitleArea/IconAttribute")}").GetComponent<Image>().sprite.name) ?? "";
-                currenElement.cardInfo.Attributes = ParametersTexts.Find(e => e.Item1.Contains("DescriptionItem")).Item2 ?? "";
-                currenElement.cardInfo.SpellType = ParametersTexts.Find(e => e.Item1.Contains("SpellTrap")).Item2 ?? "";
-                currenElement.cardInfo.Owned = ParametersTexts.Find(e => e.Item1.Contains("CardNum")).Item2 ?? "";
+                currentElement.Name = ParametersTexts[0].Item2;
+                currentElement.Description = ParametersTexts.Find(e => e.Item1.Contains("DescriptionValue")).Item2 ?? "";
+                currentElement.cardInfo.Stars = ParametersTexts.Find(e => e.Item1.Contains("Rank") || e.Item1.Contains("Level")).Item2 ?? "";
+                currentElement.cardInfo.Atk = ParametersTexts.Find(e => e.Item1.Contains("Atk")).Item2 ?? "";
+                currentElement.cardInfo.Def = ParametersTexts.Find(e => e.Item1.Contains("Def")).Item2 ?? "";
+                currentElement.cardInfo.PendulumScale = ParametersTexts.Find(e => e.Item1.Contains("Pendulum")).Item2 ?? "";
+                currentElement.cardInfo.Link = ParametersTexts.Find(e => e.Item1.Contains("Link")).Item2 ?? "";
+                currentElement.cardInfo.Element = GetElement(GameObject.Find($"{pathPrefix}/{(pathConditions[0].Condition == false ? (pathConditions[1].Condition ? "TitleArea/PlateTitle/IconAttribute" : "TitleArea/AttributeRoot/IconAttribute") : "TitleAreaGroup/TitleArea/IconAttribute")}").GetComponent<Image>().sprite.name) ?? "";
+                currentElement.cardInfo.Attributes = ParametersTexts.Find(e => e.Item1.Contains("DescriptionItem")).Item2 ?? "";
+                currentElement.cardInfo.SpellType = ParametersTexts.Find(e => e.Item1.Contains("SpellTrap")).Item2 ?? "";
+                currentElement.cardInfo.Owned = ParametersTexts.Find(e => e.Item1.Contains("CardNum")).Item2 ?? "";
 
                 break;
             }
@@ -240,40 +240,40 @@ namespace BlindMode
 
         public static string FormatInfo()
         {
-            if (string.IsNullOrWhiteSpace(currenElement.Name)) return string.Empty;
+            if (string.IsNullOrWhiteSpace(currentElement.Name)) return string.Empty;
 
             List<string> resultList = new List<string>
             {
-                !string.IsNullOrEmpty(currenElement.Name) ? $"Name: {currenElement.Name}" : null,
-                !string.IsNullOrEmpty(currenElement.Description) ? $"Description: {currenElement.Description}" : null
+                !string.IsNullOrEmpty(currentElement.Name) ? $"Name: {currentElement.Name}" : null,
+                !string.IsNullOrEmpty(currentElement.Description) ? $"Description: {currentElement.Description}" : null
             };
 
             if (BaseClass.SnapContentManager != null || currentMenu == Menus.SOLO || currentMenu == Menus.DUEL || currentMenu == Menus.DECK)
             {
                 resultList = new List<string>
                 {
-                    !string.IsNullOrEmpty(currenElement.Name) ? $"Name: {currenElement.Name}" : null,
-                    (!currenElement.cardInfo.IsInHand && IsInDuel) ? $"Is faced down?: {!GetCardRootOfCurrentCard().isFace}" : null,
-                    !string.IsNullOrEmpty(currenElement.cardInfo.Atk) ? $"Attack: {currenElement.cardInfo.Atk}" : null,
-                    !string.IsNullOrEmpty(currenElement.cardInfo.Link) ? $"Link level: {currenElement.cardInfo.Link}" : null,
-                    !string.IsNullOrEmpty(currenElement.cardInfo.Def) ? $"Defense: {currenElement.cardInfo.Def}" : null,
-                    !string.IsNullOrEmpty(currenElement.cardInfo.Stars) ? $"Stars: {currenElement.cardInfo.Stars}" : null,
-                    !string.IsNullOrEmpty(currenElement.cardInfo.Element) ? $"Element: {currenElement.cardInfo.Element}" : null,
-                    !string.IsNullOrEmpty(currenElement.cardInfo.PendulumScale) ? $"Pendulum scale: {currenElement.cardInfo.PendulumScale}" : null,
-                    !string.IsNullOrEmpty(currenElement.cardInfo.Attributes) ? $"Attributes: {(currentMenu == Menus.DECK ? currenElement.cardInfo.Attributes[1..^1] : currenElement.cardInfo.Attributes)}" : null,
-                    !string.IsNullOrEmpty(currenElement.cardInfo.SpellType) ? $"Spell type: {currenElement.cardInfo.SpellType}" : null,
-                    !string.IsNullOrEmpty(currenElement.cardInfo.Owned) ? $"Owned: {currenElement.cardInfo.Owned}" : null,
-                    !string.IsNullOrEmpty(currenElement.Description) ? $"Description: {currenElement.Description}" : FindExtendedTextElement(null, "UI/ContentCanvas/ContentManager/DuelClient/CardInfo/CardInfo(Clone)/Root/Window/DescriptionArea/TextArea/Viewport/TextDescriptionValue/"),
+                    !string.IsNullOrEmpty(currentElement.Name) ? $"Name: {currentElement.Name}" : null,
+                    (!currentElement.cardInfo.IsInHand && IsInDuel) ? $"Is faced down?: {!GetCardRootOfCurrentCard().isFace}" : null,
+                    !string.IsNullOrEmpty(currentElement.cardInfo.Atk) ? $"Attack: {currentElement.cardInfo.Atk}" : null,
+                    !string.IsNullOrEmpty(currentElement.cardInfo.Link) ? $"Link level: {currentElement.cardInfo.Link}" : null,
+                    !string.IsNullOrEmpty(currentElement.cardInfo.Def) ? $"Defense: {currentElement.cardInfo.Def}" : null,
+                    !string.IsNullOrEmpty(currentElement.cardInfo.Stars) ? $"Stars: {currentElement.cardInfo.Stars}" : null,
+                    !string.IsNullOrEmpty(currentElement.cardInfo.Element) ? $"Element: {currentElement.cardInfo.Element}" : null,
+                    !string.IsNullOrEmpty(currentElement.cardInfo.PendulumScale) ? $"Pendulum scale: {currentElement.cardInfo.PendulumScale}" : null,
+                    !string.IsNullOrEmpty(currentElement.cardInfo.Attributes) ? $"Attributes: {(currentMenu == Menus.DECK ? currentElement.cardInfo.Attributes[1..^1] : currentElement.cardInfo.Attributes)}" : null,
+                    !string.IsNullOrEmpty(currentElement.cardInfo.SpellType) ? $"Spell type: {currentElement.cardInfo.SpellType}" : null,
+                    !string.IsNullOrEmpty(currentElement.cardInfo.Owned) ? $"Owned: {currentElement.cardInfo.Owned}" : null,
+                    !string.IsNullOrEmpty(currentElement.Description) ? $"Description: {currentElement.Description}" : FindExtendedTextElement(null, "UI/ContentCanvas/ContentManager/DuelClient/CardInfo/CardInfo(Clone)/Root/Window/DescriptionArea/TextArea/Viewport/TextDescriptionValue/"),
                 };
             }
             else if (currentMenu == Menus.SHOP)
             {
                 resultList = new List<string>
                 {
-                    $"Name: {currenElement.Name}",
-                    $"Category: {currenElement.Description}",
-                    $"Time left: {currenElement.TimeLeft}",
-                    $"Price: {currenElement.Price}",
+                    $"Name: {currentElement.Name}",
+                    $"Category: {currentElement.Description}",
+                    $"Time left: {currentElement.TimeLeft}",
+                    $"Price: {currentElement.Price}",
                 };
             }
 

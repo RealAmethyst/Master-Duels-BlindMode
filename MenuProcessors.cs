@@ -47,10 +47,10 @@ namespace BlindMode
 
             List<(string, string)> ParametersTexts = FindListExtendedTextElement(__instance.gameObject);
 
-            currenElement.Name = $"{ParametersTexts.Find(e => e.Item1.Contains("PickupMessage")).Item2 ?? ""} - {ParametersTexts.Find(e => e.Item1.Contains("Name")).Item2} ({ParametersTexts.Find(e => e.Item1.Contains("New")).Item2 ?? ""})";
-            currenElement.Description = $"{FindExtendedTextElement(null, "UI/ContentCanvas/ContentManager/Shop/ShopUI(Clone)/Root/Main/ProductsRoot/ShowcaseWidget/ListRoot/ProductList/Viewport/Mask/Content/ShopGroupHeaderWidget(Clone)/Label", false)}";
-            currenElement.TimeLeft = $"{ParametersTexts.Find(e => e.Item1.Contains("Limit")).Item2 ?? "None"}";
-            currenElement.Price = $"{ParametersTexts.Find(e => e.Item1.Contains("PriceGroup")).Item2 ?? ""}";
+            currentElement.Name = $"{ParametersTexts.Find(e => e.Item1.Contains("PickupMessage")).Item2 ?? ""} - {ParametersTexts.Find(e => e.Item1.Contains("Name")).Item2} ({ParametersTexts.Find(e => e.Item1.Contains("New")).Item2 ?? ""})";
+            currentElement.Description = $"{FindExtendedTextElement(null, "UI/ContentCanvas/ContentManager/Shop/ShopUI(Clone)/Root/Main/ProductsRoot/ShowcaseWidget/ListRoot/ProductList/Viewport/Mask/Content/ShopGroupHeaderWidget(Clone)/Label", false)}";
+            currentElement.TimeLeft = $"{ParametersTexts.Find(e => e.Item1.Contains("Limit")).Item2 ?? "None"}";
+            currentElement.Price = $"{ParametersTexts.Find(e => e.Item1.Contains("PriceGroup")).Item2 ?? ""}";
 
             SpeakText(FormatInfo());
         }
@@ -130,15 +130,15 @@ namespace BlindMode
 
             if (!(__instance.name.Contains("HandCard") || __instance.name.Contains("Anchor_"))) return;
 
-            currenElement.cardInfo.cardObject = __instance.gameObject;
+            currentElement.cardInfo.cardObject = __instance.gameObject;
 
             if (__instance.name.Contains("Anchor_"))
             {
-                currenElement.cardInfo.IsInHand = false;
+                currentElement.cardInfo.IsInHand = false;
             }
             else
             {
-                currenElement.cardInfo.IsInHand = true;
+                currentElement.cardInfo.IsInHand = true;
                 return;
             }
 
