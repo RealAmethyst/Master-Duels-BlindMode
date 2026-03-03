@@ -178,10 +178,9 @@ namespace BlindMode
 
             if (queueNextSpeech || DateTime.Now - lastExecutionTime >= cooldown)
             {
-                if (!string.IsNullOrEmpty(old_copiedText) && old_copiedText.Equals(text)) return;
-                if (string.IsNullOrEmpty(text?.Trim()) || bannedText.Contains(text)) return;
-
                 text = StripTags(text);
+                if (string.IsNullOrEmpty(text?.Trim()) || bannedText.Contains(text)) return;
+                if (!string.IsNullOrEmpty(old_copiedText) && old_copiedText.Equals(text)) return;
 
                 MelonLogger.Msg($"text to speak: {text}");
                 DebugLog.Log($"[Speech] {text}");
