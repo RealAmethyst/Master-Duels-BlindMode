@@ -187,27 +187,30 @@ namespace BlindMode
             {
                 if (__instance.currentStatusMode != ColorContainer.StatusMode.Enter) return;
 
-                if (IsInDuel && __instance.transform.parent.parent.name.Contains("DuelListCard"))
+                var parent = __instance.transform.parent.parent;
+                var grandparent = parent.parent;
+
+                if (IsInDuel && parent.name.Contains("DuelListCard"))
                 {
-                    __instance.transform.parent.parent.GetComponent<SelectionButton>().Click();
+                    parent.GetComponent<SelectionButton>().Click();
                     Instance.CopyUI();
                     return;
                 }
 
                 textToCopy = "";
-                string parentName = __instance.transform.parent.parent.name;
+                string parentName = parent.name;
 
                 // Dynamic cases that need computed text
-                if (parentName == "DismantleButton")
+                if (parentName == "DismantleButton" || parentName == "CreateButton")
                 {
-                    string dismantle = FindExtendedTextElement(__instance.transform.parent.parent.GetChild(6).gameObject);
-                    textToCopy = string.IsNullOrEmpty(dismantle)
-                        ? "Cant be dismantled"
-                        : $"Dismantle card for: {dismantle} {GetRarity(__instance.transform.parent.parent.GetChild(6).GetComponentInChildren<Image>().sprite.name)} cp";
-                }
-                else if (parentName == "CreateButton")
-                {
-                    textToCopy = $"Create card for: {FindExtendedTextElement(__instance.transform.parent.parent.GetChild(6).gameObject)} {GetRarity(__instance.transform.parent.parent.GetChild(6).GetComponentInChildren<Image>().sprite.name)} cp";
+                    var costChild = parent.GetChild(6);
+                    string costText = FindExtendedTextElement(costChild.gameObject);
+                    string rarity = GetRarity(costChild.GetComponentInChildren<Image>().sprite.name);
+
+                    if (parentName == "DismantleButton" && string.IsNullOrEmpty(costText))
+                        textToCopy = "Cant be dismantled";
+                    else
+                        textToCopy = $"{(parentName == "DismantleButton" ? "Dismantle" : "Create")} card for: {costText} {rarity} cp";
                 }
                 else if (parentName == "InputButton")
                 {
@@ -215,11 +218,11 @@ namespace BlindMode
                 }
                 else if (parentName == "Button0")
                 {
-                    textToCopy = $"{FindExtendedTextElement(__instance.transform.parent.parent.parent.gameObject)}, lower to higher";
+                    textToCopy = $"{FindExtendedTextElement(grandparent.gameObject)}, lower to higher";
                 }
                 else if (parentName == "Button1")
                 {
-                    textToCopy = $"{FindExtendedTextElement(__instance.transform.parent.parent.parent.gameObject)}, higher to lower";
+                    textToCopy = $"{FindExtendedTextElement(grandparent.gameObject)}, higher to lower";
                 }
                 else if (parentLabels.TryGetValue(parentName, out string label))
                 {
@@ -227,10 +230,10 @@ namespace BlindMode
                 }
 
                 // Grandparent-level lookups (override parent match if found)
-                string grandparentName = __instance.transform.parent.parent.parent.name;
+                string grandparentName = grandparent.name;
                 if (grandparentName == "ChapterDuel(Clone)")
                 {
-                    textToCopy = $"Duel, {FindExtendedTextElement(__instance.transform.parent.parent.GetChild(4).gameObject)} stars";
+                    textToCopy = $"Duel, {FindExtendedTextElement(parent.GetChild(4).gameObject)} stars";
                 }
                 else if (grandparentLabels.TryGetValue(grandparentName, out string gpLabel))
                 {
