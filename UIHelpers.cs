@@ -30,18 +30,26 @@ namespace BlindMode
 
         public static string GetRarity(string rarity) => ParseEnumFromLastChar<Rarity>(rarity);
 
+        /// <summary>
+        /// Checks a single GameObject for text components (ExtendedTextMeshProUGUI, RubyTextGX,
+        /// TMP_SubMeshUI) and appends any valid, non-banned results to the list.
+        /// </summary>
+        private static void CollectTextComponents(GameObject obj, bool useRegex, List<(string, string)> results)
+        {
+            if (obj.TryGetComponent(out ExtendedTextMeshProUGUI ext) && !IsBannedText(ext.gameObject, ext.text, useRegex))
+                results.Add(($"{ext.transform.parent.name}/{ext.name}", ext.text));
+            if (obj.TryGetComponent(out RubyTextGX ruby) && !IsBannedText(ruby.gameObject, ruby.text, useRegex))
+                results.Add(($"{ruby.transform.parent.name}/{ruby.name}", ruby.text));
+            if (obj.TryGetComponent(out TMP_SubMeshUI sub) && !IsBannedText(sub.gameObject, sub.m_TextComponent.text, useRegex))
+                results.Add(($"{sub.transform.parent.name}/{sub.name}", sub.m_TextComponent.text));
+        }
+
         public static List<(string, string)> FindListExtendedTextElement(GameObject obj, string objPath = "", bool useRegex = true)
         {
             List<(string, string)> resultList = new();
             if (obj == null && !string.IsNullOrEmpty(objPath)) obj = GameObject.Find(objPath);
 
-            if (obj.TryGetComponent(out ExtendedTextMeshProUGUI textElement) && !IsBannedText(textElement.gameObject, textElement.text, useRegex))
-                resultList.Add(($"{textElement.transform.parent.name}/{textElement.name}", textElement.text));
-            if (obj.TryGetComponent(out RubyTextGX rubyTextElement) && !IsBannedText(rubyTextElement.gameObject, rubyTextElement.text, useRegex))
-                resultList.Add(($"{rubyTextElement.transform.parent.name}/{rubyTextElement.name}", rubyTextElement.text));
-            if (obj.TryGetComponent(out TMP_SubMeshUI submeshTextElement) && !IsBannedText(submeshTextElement.gameObject, submeshTextElement.m_TextComponent.text, useRegex))
-                resultList.Add(($"{submeshTextElement.transform.parent.name}/{submeshTextElement.name}", submeshTextElement.m_TextComponent.text));
-
+            CollectTextComponents(obj, useRegex, resultList);
             resultList.AddRange(FindInChildrenList(obj, null, useRegex));
 
             return resultList.Distinct().ToList();
@@ -49,56 +57,28 @@ namespace BlindMode
 
         public static string FindExtendedTextElement(GameObject obj, string objPath = "", bool useRegex = true)
         {
-            if(obj == null && !string.IsNullOrEmpty(objPath)) obj = GameObject.Find(objPath);
+            if (obj == null && !string.IsNullOrEmpty(objPath)) obj = GameObject.Find(objPath);
 
-            if (obj.TryGetComponent(out ExtendedTextMeshProUGUI textElement) && !IsBannedText(textElement.gameObject, textElement.text, useRegex))
-                return textElement.text;
-            if (obj.TryGetComponent(out RubyTextGX rubyTextElement) && !IsBannedText(rubyTextElement.gameObject, rubyTextElement.text, useRegex))
-                return rubyTextElement.text;
-            if (obj.TryGetComponent(out TMP_SubMeshUI submeshTextElement) && !IsBannedText(submeshTextElement.gameObject, submeshTextElement.m_TextComponent.text, useRegex))
-                return submeshTextElement.m_TextComponent.text;
+            List<(string, string)> results = new();
+            CollectTextComponents(obj, useRegex, results);
+            if (results.Count > 0) return results[0].Item2;
 
             return FindInChildren(obj, "", useRegex);
         }
 
         public static List<(string, string)> FindInChildrenList(GameObject obj, string objPath = "", bool useRegex = true)
         {
-            if (obj == null)
-            {
-                if (!string.IsNullOrEmpty(objPath))
-                {
-                    obj = GameObject.Find(objPath);
-                }
-            }
+            if (obj == null && !string.IsNullOrEmpty(objPath))
+                obj = GameObject.Find(objPath);
 
             List<(string, string)> resultList = new();
 
             for (int i = 0; i < obj.transform.childCount; i++)
             {
-                Transform objTransform = obj.transform.GetChild(i);
+                CollectTextComponents(obj.transform.GetChild(i).gameObject, useRegex, resultList);
 
-                if (objTransform.TryGetComponent(out ExtendedTextMeshProUGUI textElement) &&
-                    !IsBannedText(textElement.gameObject, textElement.text, useRegex))
-                {
-                    resultList.Add(($"{textElement.transform.parent.name}/{textElement.name}", textElement.text));
-                }
-
-                if (objTransform.TryGetComponent(out RubyTextGX rubyTextElement) &&
-                    !IsBannedText(rubyTextElement.gameObject, rubyTextElement.text, useRegex))
-                {
-                    resultList.Add(($"{rubyTextElement.transform.parent.name}/{rubyTextElement.name}", rubyTextElement.text));
-                }
-
-                if (objTransform.TryGetComponent(out TMP_SubMeshUI submeshTextElement) &&
-                    !IsBannedText(submeshTextElement.gameObject, submeshTextElement.m_TextComponent.text, useRegex))
-                {
-                    resultList.Add(($"{submeshTextElement.transform.parent.name}/{submeshTextElement.name}", submeshTextElement.m_TextComponent.text));
-                }
-
-                if(objTransform.childCount > 0)
-                {
-                    resultList.AddRange(FindInChildrenList(objTransform.gameObject, useRegex: useRegex));
-                }
+                if (obj.transform.GetChild(i).childCount > 0)
+                    resultList.AddRange(FindInChildrenList(obj.transform.GetChild(i).gameObject, useRegex: useRegex));
             }
 
             return resultList.Distinct().ToList();
