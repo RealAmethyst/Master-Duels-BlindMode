@@ -21,6 +21,13 @@ namespace BlindMode
         private static readonly HashSet<string> containerLabels = new(StringComparer.OrdinalIgnoreCase)
             { "Root", "RootContent", "RootBottom" };
 
+        private static string FormatDialogAnnouncement(string title, string body)
+        {
+            if (!string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(body))
+                return $"Dialog. {title}. {body}";
+            return $"Dialog. {(!string.IsNullOrEmpty(title) ? title : body)}";
+        }
+
         /// <summary>
         /// Collect all visible text from TMP_Text components under a GameObject.
         /// Returns (path, cleanText) tuples where path is "parentName/componentName".
@@ -289,9 +296,7 @@ namespace BlindMode
                 // Mark this dialog as announced so CheckDialogTitle won't re-announce
                 lastDialogTitle = eom.name;
 
-                string announcement = !string.IsNullOrEmpty(body)
-                    ? $"Dialog. {title}. {body}"
-                    : $"Dialog. {title}";
+                string announcement = FormatDialogAnnouncement(title, body);
 
                 DebugLog.Log($"[Dialog-VC] {vc.name}: title='{title}', body='{body}'");
                 SpeakScreenHeader(announcement);
@@ -357,13 +362,7 @@ namespace BlindMode
                         // Now safe to mark as announced
                         lastDialogTitle = dialogKey;
 
-                        string announcement;
-                        if (!string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(bodyText))
-                            announcement = $"Dialog. {title}. {bodyText}";
-                        else if (!string.IsNullOrEmpty(title))
-                            announcement = $"Dialog. {title}";
-                        else
-                            announcement = $"Dialog. {bodyText}";
+                        string announcement = FormatDialogAnnouncement(title, bodyText);
 
                         DebugLog.Log($"[Dialog] Detected: {dialogRoot.name}/{dialogUI.name}, title='{title}', body='{bodyText}'");
                         SpeakScreenHeader(announcement);
