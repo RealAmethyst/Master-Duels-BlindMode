@@ -242,17 +242,13 @@ namespace BlindMode
         {
             if (string.IsNullOrWhiteSpace(currentElement.Name)) return string.Empty;
 
-            List<string> resultList = new List<string>
-            {
-                !string.IsNullOrEmpty(currentElement.Name) ? $"Name: {currentElement.Name}" : null,
-                !string.IsNullOrEmpty(currentElement.Description) ? $"Description: {currentElement.Description}" : null
-            };
+            List<string> resultList;
 
             if (BaseClass.SnapContentManager != null || currentMenu == Menus.SOLO || currentMenu == Menus.DUEL || currentMenu == Menus.DECK)
             {
                 resultList = new List<string>
                 {
-                    !string.IsNullOrEmpty(currentElement.Name) ? $"Name: {currentElement.Name}" : null,
+                    $"Name: {currentElement.Name}",
                     (!currentElement.cardInfo.IsInHand && IsInDuel) ? $"Is faced down?: {!GetCardRootOfCurrentCard().isFace}" : null,
                     !string.IsNullOrEmpty(currentElement.cardInfo.Atk) ? $"Attack: {currentElement.cardInfo.Atk}" : null,
                     !string.IsNullOrEmpty(currentElement.cardInfo.Link) ? $"Link level: {currentElement.cardInfo.Link}" : null,
@@ -276,8 +272,16 @@ namespace BlindMode
                     $"Price: {currentElement.Price}",
                 };
             }
+            else
+            {
+                resultList = new List<string>
+                {
+                    $"Name: {currentElement.Name}",
+                    !string.IsNullOrEmpty(currentElement.Description) ? $"Description: {currentElement.Description}" : null
+                };
+            }
 
-            resultList = resultList.Where(item => item?.Trim() != null).ToList();
+            resultList = resultList.Where(item => item != null).ToList();
 
             return string.Join("\n", resultList);
         }
