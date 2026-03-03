@@ -22,7 +22,7 @@ All code lives in `namespace BlindMode` with extensive `using static` imports be
 
 **Plugin.cs** - MelonMod entry point. Registers `BaseClass` in Il2Cpp, creates a persistent GameObject.
 
-**BaseClass.cs** - Core MonoBehaviour singleton. Owns all shared state as public static fields (`currentMenu`, `IsInDuel`, `queueNextSpeech`, `pendingButtonText`, etc.). Houses `Update()` which coordinates polling for dialogs, screen changes, downloads, and deferred speech. Contains `SpeakText()` (with cooldown/dedup) and `SpeakScreenHeader()` (sets queue flag). Also defines nested types: `CardCustomInfo`, `PreviewElement`, `Attribute`/`Rarity`/`DuelPositions` enums.
+**BaseClass.cs** - Core MonoBehaviour singleton. Owns all shared state as public static fields (`currentMenu`, `IsInDuel`, `queueNextSpeech`, `pendingButtonText`, etc.). Houses `Update()` which coordinates polling for dialogs, screen changes, downloads, and deferred speech. Contains `SpeakText()` (with cooldown/dedup) and `SpeakScreenHeader()` (sets queue flag). Also defines nested types: `CardCustomInfo`, `PreviewElement`, `Attribute`/`Rarity` enums.
 
 **ScreenDetection.cs** - Detects screen/dialog changes and announces them. `FindScreenTitle()` extracts titles from `ElementObjectManager.serializedElements` arrays. Dialog detection uses both OnCreatedView patches (immediate) and `CheckDialogTitle()` polling (fallback). `CheckScreenChange()` maps ViewController names to menu contexts.
 
@@ -62,4 +62,6 @@ Key game types (from `dump.cs.txt`): `BaseMenuViewController` (screen controller
 
 ## Documentation
 
-See `llm-docs/` for detailed reference material on game screens, ViewControllers, and modding resources.
+- `llm-docs/game-screens.md` — Comprehensive map of all ViewControllers, menus, dialogs, and duel features the mod handles.
+- `llm-docs/modding-resources.md` — API reference notes for dump.cs.txt, key game namespaces, and assembly dependencies.
+- `dump.cs.txt` (gitignored, ~917K lines) — Decompiled game type definitions. Search with grep for type/method lookups.
