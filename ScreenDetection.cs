@@ -18,6 +18,108 @@ namespace BlindMode
 {
     public static class ScreenDetection
     {
+        private static readonly HashSet<string> containerLabels = new(StringComparer.OrdinalIgnoreCase)
+            { "Root", "RootContent", "RootBottom" };
+
+        /// <summary>
+        /// Collect all visible text from TMP_Text components under a GameObject.
+        /// Returns (path, cleanText) tuples where path is "parentName/componentName".
+        /// </summary>
+        private static List<(string path, string text)> CollectTexts(GameObject root, bool activeOnly, string logPrefix = null)
+        {
+            var results = new List<(string path, string text)>();
+            var allTmp = root.GetComponentsInChildren<TMP_Text>(true);
+            if (allTmp == null) return results;
+
+            foreach (var tmp in allTmp)
+            {
+                if (tmp == null) continue;
+                if (activeOnly && !tmp.gameObject.activeInHierarchy) continue;
+                string rawText = tmp.text;
+                if (string.IsNullOrEmpty(rawText?.Trim())) continue;
+                string cleanText = StripTags(rawText).Trim();
+                if (string.IsNullOrEmpty(cleanText)) continue;
+
+                string path = $"{tmp.transform.parent?.name ?? "root"}/{tmp.name}";
+                results.Add((path, cleanText));
+                if (logPrefix != null)
+                    DebugLog.Log($"{logPrefix} {path} = {cleanText}");
+            }
+            return results;
+        }
+
+        /// <summary>
+        /// Extract title and body from a list of (path, text) tuples using keyword matching.
+        /// Looks for title/header keywords, then message/desc/body keywords.
+        /// Falls back to first long text after title, then first non-button text.
+        /// </summary>
+        private static (string title, string body) ExtractTitleAndBody(List<(string path, string text)> texts)
+        {
+            string title = null;
+            string body = null;
+
+            // Match by path keyword
+            foreach (var (path, text) in texts)
+            {
+                string pathLower = path.ToLower();
+                if (pathLower.Contains("button") || pathLower.Contains("cancel")) continue;
+
+                if (title == null && (pathLower.Contains("title") || pathLower.Contains("header")))
+                    title = text;
+                else if (body == null && (pathLower.Contains("message") || pathLower.Contains("desc") || pathLower.Contains("info") || pathLower.Contains("body")))
+                    body = text;
+            }
+
+            // If title found but no body, look for first long text after title
+            if (!string.IsNullOrEmpty(title) && string.IsNullOrEmpty(body))
+            {
+                bool pastTitle = false;
+                foreach (var (path, text) in texts)
+                {
+                    if (text == title) { pastTitle = true; continue; }
+                    if (!pastTitle) continue;
+                    if (text.Length < 30) continue;
+                    string pathLower = path.ToLower();
+                    if (pathLower.Contains("button") || pathLower.Contains("cancel")) continue;
+                    body = text;
+                    break;
+                }
+            }
+
+            // Fallback: first non-button text
+            if (string.IsNullOrEmpty(title) && string.IsNullOrEmpty(body))
+            {
+                foreach (var (path, text) in texts)
+                {
+                    string pathLower = path.ToLower();
+                    if (pathLower.Contains("button") || pathLower.Contains("cancel")) continue;
+                    if (IsPlaceholderText(text)) continue;
+
+                    if (string.IsNullOrEmpty(title))
+                        title = text;
+                    else if (string.IsNullOrEmpty(body))
+                    {
+                        body = text;
+                        break;
+                    }
+                }
+            }
+
+            return (title, body);
+        }
+
+        /// <summary>
+        /// Get the focused ViewController from the content manager.
+        /// </summary>
+        private static ViewController GetFocusVC()
+        {
+            GameObject contentManager = GameObject.Find("UI/ContentCanvas/ContentManager");
+            if (contentManager == null) return null;
+            var vcm = contentManager.GetComponent<ViewControllerManager>();
+            if (vcm == null) return null;
+            return vcm.GetFocusViewController();
+        }
+
         /// <summary>
         /// Get the ElementObjectManager (m_View) from a BaseMenuViewController.
         /// m_View is a protected field at offset 0x88 that holds the VC's UI element manager.
@@ -79,10 +181,6 @@ namespace BlindMode
                     {
                         DebugLog.Log($"[FindTitle] serializedElements count: {serialized.Length}");
 
-                        // Collect all element labels that are containers (have children that are also elements)
-                        var containerLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                            { "Root", "RootContent", "RootBottom" };
-
                         foreach (var elem in serialized)
                         {
                             if (elem == null) continue;
@@ -125,68 +223,12 @@ namespace BlindMode
 
                 // Approach 2: Fall back to scanning all TMP_Text in the EOM hierarchy (includeInactive=true)
                 if (textElements.Count == 0)
-                {
-                    try
-                    {
-                        var allText = eom.gameObject.GetComponentsInChildren<TMP_Text>(true);
-                        DebugLog.Log($"[FindTitle] Fallback TMP_Text scan count: {allText?.Length ?? 0}");
-
-                        if (allText != null)
-                        {
-                            foreach (var tmp in allText)
-                            {
-                                if (tmp == null) continue;
-
-                                string rawText = tmp.text;
-                                if (string.IsNullOrEmpty(rawText?.Trim())) continue;
-
-                                string cleanText = StripTags(rawText).Trim();
-                                if (string.IsNullOrEmpty(cleanText)) continue;
-
-                                string path = $"{tmp.transform.parent?.name ?? "root"}/{tmp.name}";
-                                textElements.Add((path, cleanText));
-                                DebugLog.Log($"[EOM-fallback] {vc.name} | {path} = {cleanText}");
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        DebugLog.Log($"[FindTitle] Error in fallback scan: {ex.Message}");
-                    }
-                }
+                    textElements = CollectTexts(eom.gameObject, activeOnly: false, $"[EOM-fallback] {vc.name} |");
             }
 
             // Approach 3: Last resort - scan VC's own gameObject children
             if (textElements.Count == 0)
-            {
-                try
-                {
-                    var allText = vc.gameObject.GetComponentsInChildren<TMP_Text>(true);
-                    DebugLog.Log($"[FindTitle] VC scan count: {allText?.Length ?? 0}");
-
-                    if (allText != null)
-                    {
-                        foreach (var tmp in allText)
-                        {
-                            if (tmp == null) continue;
-
-                            string rawText = tmp.text;
-                            if (string.IsNullOrEmpty(rawText?.Trim())) continue;
-
-                            string cleanText = StripTags(rawText).Trim();
-                            if (string.IsNullOrEmpty(cleanText)) continue;
-
-                            string path = $"{tmp.transform.parent?.name ?? "root"}/{tmp.name}";
-                            textElements.Add((path, cleanText));
-                            DebugLog.Log($"[EOM-vc] {vc.name} | {path} = {cleanText}");
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    DebugLog.Log($"[FindTitle] Error in VC scan: {ex.Message}");
-                }
-            }
+                textElements = CollectTexts(vc.gameObject, activeOnly: false, $"[EOM-vc] {vc.name} |");
 
             if (textElements.Count == 0) return null;
 
@@ -195,8 +237,6 @@ namespace BlindMode
             foreach (var (label, text) in textElements)
             {
                 string labelLower = label.ToLower();
-
-                // Skip button elements - they're interactive, not screen titles/messages
                 if (labelLower.StartsWith("button")) continue;
 
                 if (title == null && (labelLower.Contains("title") || labelLower.Contains("header") || labelLower.Contains("start")))
@@ -223,12 +263,7 @@ namespace BlindMode
 
             if (!string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(message))
                 return $"{title}. {message}";
-            if (!string.IsNullOrEmpty(title))
-                return title;
-            if (!string.IsNullOrEmpty(message))
-                return message;
-
-            return null;
+            return title ?? message;
         }
 
         /// <summary>
@@ -239,53 +274,16 @@ namespace BlindMode
         {
             try
             {
-                var baseVC = vc.TryCast<BaseMenuViewController>();
-                if (baseVC == null) return;
-                var eom = baseVC.m_View;
+                var eom = GetViewFromVC(vc);
                 if (eom == null) return;
 
-                string title = null;
-                string body = null;
+                var texts = CollectTexts(eom.gameObject, activeOnly: true);
+                if (texts.Count == 0) return;
 
-                var allTmp = eom.gameObject.GetComponentsInChildren<TMP_Text>(true);
-                if (allTmp == null) return;
+                // Filter out banned text
+                texts.RemoveAll(t => bannedText.Contains(t.text));
 
-                foreach (var tmp in allTmp)
-                {
-                    if (tmp == null || !tmp.gameObject.activeInHierarchy) continue;
-                    string text = tmp.text?.Trim();
-                    if (string.IsNullOrEmpty(text)) continue;
-                    text = StripTags(text).Trim();
-                    if (string.IsNullOrEmpty(text) || bannedText.Contains(text)) continue;
-
-                    string pathLower = $"{tmp.transform.parent?.name}/{tmp.name}".ToLower();
-
-                    if (title == null && (pathLower.Contains("title") || pathLower.Contains("header")))
-                        title = text;
-                    else if (body == null && (pathLower.Contains("message") || pathLower.Contains("desc") || pathLower.Contains("info") || pathLower.Contains("body")))
-                        body = text;
-                }
-
-                // If no body found via keywords, look for first long text after title
-                if (!string.IsNullOrEmpty(title) && string.IsNullOrEmpty(body))
-                {
-                    bool pastTitle = false;
-                    foreach (var tmp in allTmp)
-                    {
-                        if (tmp == null || !tmp.gameObject.activeInHierarchy) continue;
-                        string text = tmp.text?.Trim();
-                        if (string.IsNullOrEmpty(text)) continue;
-                        text = StripTags(text).Trim();
-                        if (text == title) { pastTitle = true; continue; }
-                        if (!pastTitle) continue;
-                        if (text.Length < 30) continue;
-                        string pathLower = $"{tmp.transform.parent?.name}/{tmp.name}".ToLower();
-                        if (pathLower.Contains("button") || pathLower.Contains("cancel")) continue;
-                        body = text;
-                        break;
-                    }
-                }
-
+                var (title, body) = ExtractTitleAndBody(texts);
                 if (string.IsNullOrEmpty(title)) return;
 
                 // Mark this dialog as announced so CheckDialogTitle won't re-announce
@@ -344,81 +342,14 @@ namespace BlindMode
                         string dialogKey = dialogUI.name;
                         if (dialogKey == lastDialogTitle) return;
 
-                        // Scan all TMP_Text in the dialog to find title and body
-                        string title = "";
-                        string bodyText = "";
+                        var dialogTexts = CollectTexts(dialogUI.gameObject, activeOnly: true, $"[Dialog-scan] {dialogUI.name} |");
+                        var (title, bodyText) = ExtractTitleAndBody(dialogTexts);
 
-                        var allTmp = dialogUI.gameObject.GetComponentsInChildren<TMP_Text>(true);
-                        if (allTmp != null)
+                        // Skip if title is placeholder text (not yet localized)
+                        if (IsPlaceholderText(title))
                         {
-                            var dialogTexts = new List<(string path, string text)>();
-
-                            foreach (var tmp in allTmp)
-                            {
-                                if (tmp == null || !tmp.gameObject.activeInHierarchy) continue;
-                                string rawText = tmp.text;
-                                if (string.IsNullOrEmpty(rawText?.Trim())) continue;
-
-                                string cleanText = StripTags(rawText).Trim();
-                                if (string.IsNullOrEmpty(cleanText)) continue;
-
-                                string parentName = tmp.transform.parent?.name ?? "";
-                                string fullPath = $"{parentName}/{tmp.name}";
-
-                                DebugLog.Log($"[Dialog-scan] {dialogUI.name} | {fullPath} = {cleanText}");
-                                dialogTexts.Add((fullPath, cleanText));
-                            }
-
-                            // Match title by path keyword
-                            foreach (var (path, text) in dialogTexts)
-                            {
-                                string pathLower = path.ToLower();
-                                if (string.IsNullOrEmpty(title) && (pathLower.Contains("title") || pathLower.Contains("header")))
-                                    title = text;
-                                else if (string.IsNullOrEmpty(bodyText) && (pathLower.Contains("message") || pathLower.Contains("desc") || pathLower.Contains("info") || pathLower.Contains("body")))
-                                    bodyText = text;
-                            }
-
-                            // Skip if title is placeholder text (not yet localized)
-                            if (IsPlaceholderText(title))
-                            {
-                                DebugLog.Log($"[Dialog] Skipping placeholder text for {dialogUI.name}");
-                                return; // Don't set lastDialogTitle - will retry next frame
-                            }
-
-                            // If title found but no body, look for next substantial text
-                            if (!string.IsNullOrEmpty(title) && string.IsNullOrEmpty(bodyText))
-                            {
-                                bool foundTitle = false;
-                                foreach (var (path, text) in dialogTexts)
-                                {
-                                    if (text == title) { foundTitle = true; continue; }
-                                    if (!foundTitle) continue;
-                                    if (text.Length < 30) continue;
-                                    string pathLower = path.ToLower();
-                                    if (pathLower.Contains("button") || pathLower.Contains("cancel")) continue;
-                                    bodyText = text;
-                                    break;
-                                }
-                            }
-
-                            // Fallback: first non-button text
-                            if (string.IsNullOrEmpty(title) && string.IsNullOrEmpty(bodyText))
-                            {
-                                foreach (var (path, text) in dialogTexts)
-                                {
-                                    if (path.ToLower().Contains("button") || path.ToLower().Contains("cancel")) continue;
-                                    if (IsPlaceholderText(text)) continue;
-
-                                    if (string.IsNullOrEmpty(title))
-                                        title = text;
-                                    else if (string.IsNullOrEmpty(bodyText))
-                                    {
-                                        bodyText = text;
-                                        break;
-                                    }
-                                }
-                            }
+                            DebugLog.Log($"[Dialog] Skipping placeholder text for {dialogUI.name}");
+                            return; // Don't set lastDialogTitle - will retry next frame
                         }
 
                         if (string.IsNullOrEmpty(title) && string.IsNullOrEmpty(bodyText)) return;
@@ -569,13 +500,7 @@ namespace BlindMode
         {
             try
             {
-                GameObject contentManager = GameObject.Find("UI/ContentCanvas/ContentManager");
-                if (contentManager == null) return;
-
-                ViewControllerManager vcm = contentManager.GetComponent<ViewControllerManager>();
-                if (vcm == null) return;
-
-                ViewController focusVC = vcm.GetFocusViewController();
+                ViewController focusVC = GetFocusVC();
                 if (focusVC == null) return;
 
                 string vcName = focusVC.name;
@@ -673,11 +598,7 @@ namespace BlindMode
 
             try
             {
-                GameObject contentManager = GameObject.Find("UI/ContentCanvas/ContentManager");
-                if (contentManager == null) return;
-                var vcm = contentManager.GetComponent<ViewControllerManager>();
-                if (vcm == null) return;
-                var focusVC = vcm.GetFocusViewController();
+                var focusVC = GetFocusVC();
                 if (focusVC == null) return;
 
                 string vcName = focusVC.name;
@@ -701,29 +622,16 @@ namespace BlindMode
                 if (pageText == lastEnquetePage) return;
                 lastEnquetePage = pageText;
 
-                // Scan all TMP_Text in the VC hierarchy for question/description text
-                var allTmp = focusVC.gameObject.GetComponentsInChildren<TMP_Text>(true);
-                if (allTmp == null) return;
-
+                // Collect all active text, then filter out page indicator, buttons, and option texts
+                var collected = CollectTexts(focusVC.gameObject, activeOnly: true);
                 var texts = new List<string>();
-                foreach (var tmp in allTmp)
+                foreach (var (path, text) in collected)
                 {
-                    if (tmp == null || !tmp.gameObject.activeInHierarchy) continue;
-                    string rawText = tmp.text?.Trim();
-                    if (string.IsNullOrEmpty(rawText)) continue;
-                    string clean = StripTags(rawText).Trim();
-                    if (string.IsNullOrEmpty(clean)) continue;
-
-                    // Skip page indicator, button labels, and very short text
-                    if (clean == pageText) continue;
-                    string nameLower = tmp.name.ToLower();
-                    if (nameLower.Contains("button") || nameLower.Contains("shortcut")) continue;
-
-                    // Skip option texts (they'll be spoken via button navigation)
-                    string parentName = tmp.transform.parent?.name?.ToLower() ?? "";
-                    if (parentName.Contains("toggle") || parentName.Contains("entity") || parentName.Contains("checkbox")) continue;
-
-                    texts.Add(clean);
+                    if (text == pageText) continue;
+                    string pathLower = path.ToLower();
+                    if (pathLower.Contains("button") || pathLower.Contains("shortcut")) continue;
+                    if (pathLower.Contains("toggle") || pathLower.Contains("entity") || pathLower.Contains("checkbox")) continue;
+                    texts.Add(text);
                 }
 
                 if (texts.Count == 0) return;
