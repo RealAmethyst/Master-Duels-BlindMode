@@ -339,7 +339,7 @@ namespace BlindMode
                         if (!dialogUI.name.Contains("(Clone)")) continue;
 
                         foundActiveDialog = true;
-                        string dialogKey = dialogUI.name;
+                        string dialogKey = dialogUI.name.EndsWith("(Clone)") ? dialogUI.name[..^7] : dialogUI.name;
                         if (dialogKey == lastDialogTitle) return;
 
                         var dialogTexts = CollectTexts(dialogUI.gameObject, activeOnly: true, $"[Dialog-scan] {dialogUI.name} |");
