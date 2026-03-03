@@ -152,7 +152,7 @@ namespace BlindMode
             { "AddButton", "Add +1" },
             { "RemoveButton", "Remove -1" },
             { "CardListButton", "Card list button" },
-            { "HistotyButton", "Card history button" },
+            { "HistoryButton", "Card history button" },
             { "ButtonRegulation", "Regulation button" },
             { "ButtonSecretPack", "Secret pack button" },
             { "ButtonInfoSwitching", "Switch display mode button" },
