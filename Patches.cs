@@ -12,6 +12,7 @@ using Il2CppYgomGame.Duel;
 using Il2CppYgomGame.CardBrowser;
 using Il2CppYgomGame.Menu;
 using Il2CppYgomGame.Enquete;
+using Il2CppYgomGame.Solo;
 
 using HarmonyLib;
 
@@ -128,6 +129,64 @@ namespace BlindMode
             if (!string.IsNullOrEmpty(title))
                 SpeakScreenHeader(title);
             DebugLog.Log("[Download] DownloadViewController created, tracking progress");
+        }
+    }
+
+    #endregion
+
+    #region solo gate patches
+
+    [HarmonyPatch(typeof(SoloGateUtil), nameof(SoloGateUtil.InitGateManagerData))]
+    class PatchSoloGateInitData
+    {
+        [HarmonyPostfix]
+        static void Postfix(SoloGateUtil.GateManager gateManager)
+        {
+            try
+            {
+                if (gateManager?.masterDataDic == null) { DebugLog.Log("[SoloGate] InitData: masterDataDic is null"); return; }
+                int count = 0;
+                foreach (var entry in gateManager.masterDataDic)
+                {
+                    var data = entry.Value;
+                    string name = data.StrName;
+                    string overview = data.strOverview;
+                    if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(overview))
+                    {
+                        gateOverviewMap[name] = overview;
+                        count++;
+                    }
+                }
+                DebugLog.Log($"[SoloGate] InitData: captured {count} gate overviews");
+            }
+            catch (Exception ex) { DebugLog.Log($"[SoloGate] InitData error: {ex.Message}"); }
+        }
+    }
+
+    [HarmonyPatch(typeof(SoloGateUtil), nameof(SoloGateUtil.UpdateData))]
+    class PatchSoloGateUpdateData
+    {
+        [HarmonyPostfix]
+        static void Postfix(SoloGateUtil.GateManager gateManager)
+        {
+            try
+            {
+                if (gateManager?.masterDataDic == null) { DebugLog.Log("[SoloGate] UpdateData: masterDataDic is null"); return; }
+                int count = 0;
+                foreach (var entry in gateManager.masterDataDic)
+                {
+                    var data = entry.Value;
+                    string name = data.StrName;
+                    string overview = data.strOverview;
+                    if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(overview))
+                    {
+                        gateOverviewMap[name] = overview;
+                        count++;
+                    }
+                }
+                DebugLog.Log($"[SoloGate] UpdateData: captured {count} gate overviews");
+            }
+            catch (Exception ex) { DebugLog.Log($"[SoloGate] UpdateData error: {ex.Message}"); }
         }
     }
 

@@ -74,7 +74,14 @@ namespace BlindMode
                 if (__instance.transform.childCount > 0 && __instance.transform.GetChild(0).name.Equals("Main"))
                 {
                     List<(string, string)> soloElements = FindListExtendedTextElement(__instance.gameObject, useRegex: false);
-                    textToCopy = $"{soloElements.Last().Item2}, {soloElements.Find(e => e.Item1.Contains("Complete")).Item2}";
+                    string gateName = soloElements.Last().Item2;
+                    textToCopy = $"{gateName}, {soloElements.Find(e => e.Item1.Contains("Complete")).Item2}";
+
+                    // Look up gate overview from captured data
+                    if (!string.IsNullOrEmpty(gateName) && gateOverviewMap.TryGetValue(gateName, out string overview))
+                    {
+                        textToCopy += $", {StripTags(overview).Trim()}";
+                    }
                 }
             }
             catch (Exception ex)

@@ -43,6 +43,7 @@ namespace BlindMode
         internal static string lastDialogTitle = "";
         internal static string lastScreenHeader = "";
         internal static string lastFocusViewName = "";
+        internal static Dictionary<string, string> gateOverviewMap = new();
 
         public class CardCustomInfo
         {
