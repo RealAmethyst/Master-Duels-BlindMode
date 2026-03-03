@@ -205,9 +205,8 @@ namespace BlindMode
         internal static void SpeakScreenHeader(string text)
         {
             if (string.IsNullOrEmpty(text?.Trim())) return;
-            if (text == lastScreenHeader) return;
-
             text = StripTags(text);
+            if (text == lastScreenHeader) return;
             lastScreenHeader = text;
             old_copiedText = "";
 
