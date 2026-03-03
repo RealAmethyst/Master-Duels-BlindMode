@@ -45,9 +45,7 @@ namespace BlindMode
         {
             if (!__instance.transform.parent.name.Contains("Shop")) return;
 
-            List<(string, string)> ParametersTexts = new();
-
-            ParametersTexts = FindListExtendedTextElement(__instance.gameObject);
+            List<(string, string)> ParametersTexts = FindListExtendedTextElement(__instance.gameObject);
 
             currenElement.Name = $"{ParametersTexts.Find(e => e.Item1.Contains("PickupMessage")).Item2 ?? ""} - {ParametersTexts.Find(e => e.Item1.Contains("Name")).Item2} ({ParametersTexts.Find(e => e.Item1.Contains("New")).Item2 ?? ""})";
             currenElement.Description = $"{FindExtendedTextElement(null, "UI/ContentCanvas/ContentManager/Shop/ShopUI(Clone)/Root/Main/ProductsRoot/ShowcaseWidget/ListRoot/ProductList/Viewport/Mask/Content/ShopGroupHeaderWidget(Clone)/Label", false)}";
@@ -74,13 +72,7 @@ namespace BlindMode
 
             }
 
-            // Solo chapter map: read chapter type and level from the button's parent hierarchy
-            // Parent names like ChapterDuel, ChapterScenario, ChapterGoal, ChapterPractice etc.
-            try
-            {
-                ProcessSoloChapter(__instance);
-            }
-            catch { }
+            ProcessSoloChapter(__instance);
         }
 
         /// <summary>
@@ -191,18 +183,17 @@ namespace BlindMode
                 else textToCopy = $"Owned: {textToCopy}, rarity: {GetRarity(__instance.transform.Find("IconRarity").GetComponent<Image>().sprite.name)}";
             }
 
-            if (__instance.transform.parent.parent.parent.name.Equals("Category"))
+            switch (__instance.transform.parent.parent.parent.name)
             {
-                textToCopy = $"{textToCopy}, category: {FindExtendedTextElement(__instance.transform.parent.parent.gameObject)}";
-            }
-
-            if (__instance.transform.parent.parent.parent.name.Equals("InputButton"))
-            {
-                textToCopy = "Rename deck button";
-            }
-            if (__instance.transform.parent.parent.parent.name.Equals("AutoBuildButton"))
-            {
-                textToCopy = "Auto-build button";
+                case "Category":
+                    textToCopy = $"{textToCopy}, category: {FindExtendedTextElement(__instance.transform.parent.parent.gameObject)}";
+                    break;
+                case "InputButton":
+                    textToCopy = "Rename deck button";
+                    break;
+                case "AutoBuildButton":
+                    textToCopy = "Auto-build button";
+                    break;
             }
         }
 
@@ -235,24 +226,23 @@ namespace BlindMode
             }
         }
 
+        private static void ReadNotificationText(SelectionButton __instance)
+        {
+            textToCopy = FindExtendedTextElement(__instance.transform.Find("TextBody").gameObject, null, false);
+            if (!__instance.transform.Find("BaseCategory").gameObject.activeInHierarchy) return;
+            textToCopy += $"\nStatus: {__instance.transform.Find("BaseCategory").GetChild(0).GetComponentInChildren<ExtendedTextMeshProUGUI>().text}";
+        }
+
         internal static void ProcessNotifications(SelectionButton __instance)
         {
             if (__instance.transform.Find("BaseCategory"))
-            {
-                textToCopy = FindExtendedTextElement(__instance.transform.Find("TextBody").gameObject, null, false);
-                if (!__instance.transform.Find("BaseCategory").gameObject.activeInHierarchy) return;
-                textToCopy += $"\nStatus: {__instance.transform.Find("BaseCategory").GetChild(0).GetComponentInChildren<ExtendedTextMeshProUGUI>().text}";
-            }
+                ReadNotificationText(__instance);
         }
 
         internal static void ProcessNotificationsPopup(SelectionButton __instance)
         {
             if (__instance.transform.parent.parent.parent.parent.parent.parent.name.Equals("NotificationWidget") && currentMenu == Menus.NONE)
-            {
-                textToCopy = FindExtendedTextElement(__instance.transform.Find("TextBody").gameObject, null, false);
-                if (!__instance.transform.Find("BaseCategory").gameObject.activeInHierarchy) return;
-                textToCopy += $"\nStatus: {__instance.transform.Find("BaseCategory").GetChild(0).GetComponentInChildren<ExtendedTextMeshProUGUI>().text}";
-            }
+                ReadNotificationText(__instance);
         }
 
         internal static void ProcessEventBanner(SelectionButton __instance)
