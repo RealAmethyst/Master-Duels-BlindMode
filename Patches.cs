@@ -203,14 +203,17 @@ namespace BlindMode
                 // Dynamic cases that need computed text
                 if (parentName == "DismantleButton" || parentName == "CreateButton")
                 {
-                    var costChild = parent.GetChild(6);
-                    string costText = FindExtendedTextElement(costChild.gameObject);
-                    string rarity = GetRarity(costChild.GetComponentInChildren<Image>().sprite.name);
+                    var costChild = SafeGetChild(parent, 6, "Dismantle/Create");
+                    if (costChild != null)
+                    {
+                        string costText = FindExtendedTextElement(costChild.gameObject);
+                        string rarity = GetRarity(costChild.GetComponentInChildren<Image>().sprite.name);
 
-                    if (parentName == "DismantleButton" && string.IsNullOrEmpty(costText))
-                        textToCopy = "Cant be dismantled";
-                    else
-                        textToCopy = $"{(parentName == "DismantleButton" ? "Dismantle" : "Create")} card for: {costText} {rarity} cp";
+                        if (parentName == "DismantleButton" && string.IsNullOrEmpty(costText))
+                            textToCopy = "Cant be dismantled";
+                        else
+                            textToCopy = $"{(parentName == "DismantleButton" ? "Dismantle" : "Create")} card for: {costText} {rarity} cp";
+                    }
                 }
                 else if (parentName == "InputButton")
                 {
@@ -233,7 +236,9 @@ namespace BlindMode
                 string grandparentName = grandparent.name;
                 if (grandparentName == "ChapterDuel(Clone)")
                 {
-                    textToCopy = $"Duel, {FindExtendedTextElement(parent.GetChild(4).gameObject)} stars";
+                    var starsChild = SafeGetChild(parent, 4, "ChapterDuel/stars");
+                    if (starsChild != null)
+                        textToCopy = $"Duel, {FindExtendedTextElement(starsChild.gameObject)} stars";
                 }
                 else if (grandparentLabels.TryGetValue(grandparentName, out string gpLabel))
                 {

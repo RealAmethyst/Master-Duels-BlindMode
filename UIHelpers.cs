@@ -16,6 +16,16 @@ namespace BlindMode
 {
     public static class UIHelpers
     {
+        internal static Transform SafeGetChild(Transform parent, int index, string context = null)
+        {
+            if (parent == null || index >= parent.childCount)
+            {
+                DebugLog.Log($"[SafeGetChild] {context ?? "unknown"}: expected child {index}, parent {parent?.name ?? "null"} has {parent?.childCount ?? 0} children");
+                return null;
+            }
+            return parent.GetChild(index);
+        }
+
         internal static string StripTags(string text) =>
             string.IsNullOrEmpty(text) ? text : Regex.Replace(text, @"<[^>]+>", "");
 

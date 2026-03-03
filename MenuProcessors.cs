@@ -19,7 +19,14 @@ namespace BlindMode
     {
         internal static void ProcessProfile(SelectionButton __instance)
         {
-            if (__instance.name.Equals("ButtonPlayer")) textToCopy += $", level {FindExtendedTextElement(__instance.transform.GetChild(0).GetChild(1).GetChild(1).GetChild(1).gameObject, null, false)}";
+            if (__instance.name.Equals("ButtonPlayer"))
+            {
+                Transform t = SafeGetChild(__instance.transform, 0, "ProcessProfile");
+                t = SafeGetChild(t, 1, "ProcessProfile");
+                t = SafeGetChild(t, 1, "ProcessProfile");
+                t = SafeGetChild(t, 1, "ProcessProfile");
+                if (t != null) textToCopy += $", level {FindExtendedTextElement(t.gameObject, null, false)}";
+            }
         }
 
         internal static void ProcessFriendsMenu(SelectionButton __instance)
@@ -37,7 +44,11 @@ namespace BlindMode
 
         internal static void ProcessDailyReward(SelectionButton __instance)
         {
-            if (textToCopy.Equals("Day")) textToCopy += $" {FindExtendedTextElement(__instance.transform.GetChild(3).GetChild(1).gameObject)}, Recieved: {(__instance.transform.Find("RecievedCover").gameObject.activeInHierarchy ? "Yes" : "No")}";
+            if (textToCopy.Equals("Day"))
+            {
+                Transform t = SafeGetChild(SafeGetChild(__instance.transform, 3, "ProcessDailyReward"), 1, "ProcessDailyReward");
+                if (t != null) textToCopy += $" {FindExtendedTextElement(t.gameObject)}, Recieved: {(__instance.transform.Find("RecievedCover").gameObject.activeInHierarchy ? "Yes" : "No")}";
+            }
         }
 
         internal static void ProcessPacks(SelectionButton __instance)
@@ -166,10 +177,17 @@ namespace BlindMode
             {
                 if (rootParent.childCount > 0)
                 {
-                    string rewardText = FindExtendedTextElement(__instance.transform.GetChild(0).GetChild(2).gameObject, null, false);
-                    rewardText = "x" + rewardText[1..];
+                    Transform rewardChild = SafeGetChild(SafeGetChild(__instance.transform, 0, "ProcessMissionsMenu/reward"), 2, "ProcessMissionsMenu/reward");
+                    string rewardText = rewardChild != null ? FindExtendedTextElement(rewardChild.gameObject, null, false) : null;
+                    rewardText = rewardText != null ? "x" + rewardText[1..] : "";
 
-                    textToCopy = $"{FindExtendedTextElement(rootParent.gameObject, null, false)}\n Reward: {rewardText}\n Time left: {FindExtendedTextElement(rootParent.GetChild(1).GetChild(0).GetChild(3).GetChild(0).gameObject, null, false) ?? "None"}";
+                    Transform timeChild = SafeGetChild(rootParent, 1, "ProcessMissionsMenu/time");
+                    timeChild = SafeGetChild(timeChild, 0, "ProcessMissionsMenu/time");
+                    timeChild = SafeGetChild(timeChild, 3, "ProcessMissionsMenu/time");
+                    timeChild = SafeGetChild(timeChild, 0, "ProcessMissionsMenu/time");
+                    string timeText = timeChild != null ? FindExtendedTextElement(timeChild.gameObject, null, false) ?? "None" : "None";
+
+                    textToCopy = $"{FindExtendedTextElement(rootParent.gameObject, null, false)}\n Reward: {rewardText}\n Time left: {timeText}";
                 }
             }
         }
@@ -229,7 +247,8 @@ namespace BlindMode
         {
             textToCopy = FindExtendedTextElement(__instance.transform.Find("TextBody").gameObject, null, false);
             if (!__instance.transform.Find("BaseCategory").gameObject.activeInHierarchy) return;
-            textToCopy += $"\nStatus: {__instance.transform.Find("BaseCategory").GetChild(0).GetComponentInChildren<ExtendedTextMeshProUGUI>().text}";
+            Transform statusChild = SafeGetChild(__instance.transform.Find("BaseCategory"), 0, "ReadNotificationText");
+            if (statusChild != null) textToCopy += $"\nStatus: {statusChild.GetComponentInChildren<ExtendedTextMeshProUGUI>().text}";
         }
 
         internal static void ProcessNotifications(SelectionButton __instance)
