@@ -529,34 +529,19 @@ namespace BlindMode
                 // Title screen: just read the version number from CodeVer EOM element
                 if (cleanName == "Title")
                 {
-                    ElementObjectManager eom = GetViewFromVC(focusVC);
-                    if (eom != null)
+                    try
                     {
-                        try
+                        var codeVer = GetViewFromVC(focusVC)?.GetElement("CodeVer");
+                        var tmp = codeVer?.GetComponentInChildren<TMP_Text>(true);
+                        if (tmp != null && !string.IsNullOrEmpty(tmp.text?.Trim()))
                         {
-                            var serialized = eom.serializedElements;
-                            if (serialized != null)
-                            {
-                                foreach (var elem in serialized)
-                                {
-                                    if (elem == null) continue;
-                                    if (elem.label == "CodeVer")
-                                    {
-                                        var tmp = elem.gameObject?.GetComponentInChildren<TMP_Text>(true);
-                                        if (tmp != null && !string.IsNullOrEmpty(tmp.text?.Trim()))
-                                        {
-                                            SpeakScreenHeader(tmp.text.Trim());
-                                            DebugLog.Log($"[ScreenChange] Title | version='{tmp.text.Trim()}'");
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
+                            SpeakScreenHeader(tmp.text.Trim());
+                            DebugLog.Log($"[ScreenChange] Title | version='{tmp.text.Trim()}'");
                         }
-                        catch (Exception ex)
-                        {
-                            DebugLog.Log($"[ScreenChange] Title version error: {ex.Message}");
-                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        DebugLog.Log($"[ScreenChange] Title version error: {ex.Message}");
                     }
                     return;
                 }
