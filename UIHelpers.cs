@@ -21,37 +21,16 @@ namespace BlindMode
         internal static string StripTags(string text) =>
             string.IsNullOrEmpty(text) ? text : Regex.Replace(text, @"<[^>]+>", "");
 
-        public static string GetElement(string attrname)
+        private static string ParseEnumFromLastChar<T>(string text) where T : struct, Enum
         {
-            if (int.TryParse(attrname.Last().ToString(), out int num))
-            {
-                foreach (object obj in Enum.GetValues(typeof(BaseClass.Attribute)))
-                {
-                    BaseClass.Attribute attribute = (BaseClass.Attribute)obj;
-                    if (attribute == (BaseClass.Attribute)num)
-                    {
-                        return attribute.ToString();
-                    }
-                }
-            }
+            if (int.TryParse(text.Last().ToString(), out int num) && Enum.IsDefined(typeof(T), num))
+                return ((T)(object)num).ToString();
             return "";
         }
 
-        public static string GetRarity(string rarity)
-        {
-            if (int.TryParse(rarity.Last().ToString(), out int num))
-            {
-                foreach (object obj in Enum.GetValues(typeof(Rarity)))
-                {
-                    Rarity attribute = (Rarity)obj;
-                    if (attribute == (Rarity)num)
-                    {
-                        return attribute.ToString();
-                    }
-                }
-            }
-            return "";
-        }
+        public static string GetElement(string attrname) => ParseEnumFromLastChar<BaseClass.Attribute>(attrname);
+
+        public static string GetRarity(string rarity) => ParseEnumFromLastChar<Rarity>(rarity);
 
         public static List<(string, string)> FindListExtendedTextElement(GameObject obj, string objPath = "", bool useRegex = true)
         {
@@ -129,58 +108,24 @@ namespace BlindMode
 
         public static string FindInChildren(GameObject obj, string objPath = "", bool useRegex = true)
         {
-            if (obj == null)
-            {
-                if (!string.IsNullOrEmpty(objPath))
-                {
-                    obj = GameObject.Find(objPath);
-                }
-            }
-
-            Transform objTransform = null;
-            ExtendedTextMeshProUGUI UGUIChild = null;
-            RubyTextGX rubyChild = null;
-            TMP_SubMeshUI submeshChild = null;
+            if (obj == null && !string.IsNullOrEmpty(objPath))
+                obj = GameObject.Find(objPath);
 
             for (int i = 0; i < obj.transform.childCount; i++)
             {
-                objTransform = obj.transform.GetChild(i);
+                Transform child = obj.transform.GetChild(i);
 
-                if (objTransform.TryGetComponent(out ExtendedTextMeshProUGUI textElement) && !IsBannedText(textElement.gameObject, textElement.text, useRegex))
-                {
-                    return textElement.text;
-                }
+                var ugui = child.GetComponentInChildren<ExtendedTextMeshProUGUI>();
+                if (ugui != null && !IsBannedText(ugui.gameObject, ugui.text, useRegex))
+                    return ugui.text;
 
-                UGUIChild = objTransform.GetComponentInChildren<ExtendedTextMeshProUGUI>();
+                var ruby = child.GetComponentInChildren<RubyTextGX>();
+                if (ruby != null && !IsBannedText(ruby.gameObject, ruby.text, useRegex))
+                    return ruby.text;
 
-                if (UGUIChild != null && !IsBannedText(UGUIChild.gameObject, UGUIChild.text, useRegex))
-                {
-                    return UGUIChild.text;
-                }
-
-                if (objTransform.TryGetComponent(out RubyTextGX rubyTextElement) && !IsBannedText(rubyTextElement.gameObject, rubyTextElement.text, useRegex))
-                {
-                    return rubyTextElement.text;
-                }
-
-                rubyChild = objTransform.GetComponentInChildren<RubyTextGX>();
-
-                if (rubyChild != null && !IsBannedText(rubyChild.gameObject, rubyChild.text, useRegex))
-                {
-                    return rubyChild.text;
-                }
-
-                if (objTransform.TryGetComponent(out TMP_SubMeshUI submeshTextElement) && !IsBannedText(submeshTextElement.gameObject, submeshTextElement.textComponent.text, useRegex))
-                {
-                    return submeshTextElement.textComponent.text;
-                }
-
-                submeshChild = objTransform.GetComponentInChildren<TMP_SubMeshUI>();
-
-                if (submeshChild != null && !IsBannedText(submeshChild.gameObject, submeshChild.textComponent.text, useRegex))
-                {
-                    return submeshChild.textComponent.text;
-                }
+                var submesh = child.GetComponentInChildren<TMP_SubMeshUI>();
+                if (submesh != null && !IsBannedText(submesh.gameObject, submesh.textComponent.text, useRegex))
+                    return submesh.textComponent.text;
             }
 
             return null;
