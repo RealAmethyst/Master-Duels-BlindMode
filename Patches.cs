@@ -279,6 +279,33 @@ namespace BlindMode
     [HarmonyPatch(typeof(SelectionButton), nameof(SelectionButton.OnSelected), MethodType.Normal)]
     class PatchOnSelected
     {
+        /// <summary>
+        /// Search sibling elements for text, walking up to 3 parent levels.
+        /// Handles toggle/radio widgets where the label is a sibling of the button.
+        /// </summary>
+        static string FindSiblingText(Transform start)
+        {
+            var current = start;
+            for (int level = 0; level < 3 && current.parent != null; level++)
+            {
+                var parent = current.parent;
+                for (int i = 0; i < parent.childCount; i++)
+                {
+                    var sibling = parent.GetChild(i);
+                    if (sibling == current) continue;
+                    var tmp = sibling.GetComponent<TMP_Text>();
+                    if (tmp != null && tmp.gameObject.activeInHierarchy)
+                    {
+                        string clean = StripTags(tmp.text ?? "").Trim();
+                        if (!string.IsNullOrEmpty(clean))
+                            return clean;
+                    }
+                }
+                current = current.parent;
+            }
+            return null;
+        }
+
         [HarmonyPostfix]
         static void Postfix(SelectionButton __instance)
         {
@@ -287,30 +314,7 @@ namespace BlindMode
             // Fallback: search sibling elements for text (not recursive subtrees).
             // Handles toggle/radio widgets where the label is a sibling of the button.
             if (string.IsNullOrEmpty(textToCopy?.Trim()))
-            {
-                var current = __instance.transform;
-                for (int level = 0; level < 3 && current.parent != null; level++)
-                {
-                    var parent = current.parent;
-                    for (int i = 0; i < parent.childCount; i++)
-                    {
-                        var sibling = parent.GetChild(i);
-                        if (sibling == current) continue;
-                        var tmp = sibling.GetComponent<TMP_Text>();
-                        if (tmp != null && tmp.gameObject.activeInHierarchy)
-                        {
-                            string clean = StripTags(tmp.text ?? "").Trim();
-                            if (!string.IsNullOrEmpty(clean))
-                            {
-                                textToCopy = clean;
-                                goto siblingFound;
-                            }
-                        }
-                    }
-                    current = current.parent;
-                }
-                siblingFound:;
-            }
+                textToCopy = FindSiblingText(__instance.transform) ?? textToCopy;
 
             switch (currentMenu)
             {
